@@ -1,0 +1,541 @@
+@import '../../styles/variables.css';
+
+.admin-statistics-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    padding-bottom: 3rem;
+}
+
+.statistics-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.header-title-group h1 {
+    font-size: 1.5rem;
+    /* 2xl */
+    font-weight: 700;
+    color: white;
+    margin: 0;
+}
+
+.header-title-group p {
+    color: var(--slate-500);
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+.date-range-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: var(--slate-800);
+    border: 1px solid var(--slate-700);
+    border-radius: var(--border-radius-xl);
+    color: var(--slate-300);
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.date-range-btn:hover {
+    background-color: var(--slate-700);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.stat-card {
+    background-color: var(--slate-800);
+    padding: 1.5rem;
+    border-radius: var(--border-radius-2xl);
+    border: 1px solid var(--slate-700);
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+}
+
+.stat-card-bg-icon {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 1.5rem;
+    opacity: 0.05;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+
+.stat-card:hover .stat-card-bg-icon {
+    opacity: 0.1;
+}
+
+.bg-icon-svg {
+    width: 5rem;
+    height: 5rem;
+    transform: rotate(12deg);
+}
+
+.bg-icon-svg.blue {
+    color: var(--blue-500);
+}
+
+.bg-icon-svg.orange {
+    color: var(--orange-500);
+}
+
+.bg-icon-svg.emerald {
+    color: var(--emerald-500);
+}
+
+.bg-icon-svg.indigo {
+    color: var(--indigo-500);
+}
+
+.stat-content {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    justify-content: space-between;
+}
+
+.stat-icon-wrapper {
+    padding: 0.75rem;
+    border-radius: var(--border-radius-xl);
+    display: inline-block;
+    margin-bottom: 1rem;
+    width: fit-content;
+}
+
+.stat-icon-wrapper.blue {
+    background-color: rgba(59, 130, 246, 0.1);
+    color: var(--blue-400);
+}
+
+.stat-icon-wrapper.orange {
+    background-color: rgba(249, 115, 22, 0.1);
+    color: var(--orange-400);
+}
+
+.stat-icon-wrapper.emerald {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: var(--emerald-400);
+}
+
+.stat-icon-wrapper.indigo {
+    background-color: rgba(99, 102, 241, 0.1);
+    color: var(--indigo-400);
+}
+
+.stat-title {
+    color: var(--slate-400);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 0;
+}
+
+.stat-value {
+    font-size: 1.875rem;
+    /* 3xl */
+    font-weight: 700;
+    color: white;
+    margin: 0.25rem 0 0 0;
+}
+
+.stat-subtext {
+    color: var(--slate-500);
+    font-size: 0.625rem;
+    /* 10px */
+    margin-top: 1rem;
+    font-family: monospace;
+    text-transform: uppercase;
+    letter-spacing: -0.05em;
+}
+
+.charts-section {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+    .charts-section {
+        grid-template-columns: 2fr 1fr;
+    }
+}
+
+.chart-card {
+    background-color: var(--slate-800);
+    padding: 2rem;
+    border-radius: var(--border-radius-3xl);
+    border: 1px solid var(--slate-700);
+    box-shadow: var(--shadow-xl);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+}
+
+.chart-title h3 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+}
+
+.chart-title p {
+    font-size: 0.75rem;
+    color: var(--slate-500);
+    margin: 0;
+}
+
+.chart-legend {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.legend-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background-color: var(--blue-500);
+}
+
+.legend-text {
+    font-size: 0.625rem;
+    color: var(--slate-400);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.bar-chart-container {
+    height: 16rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    position: relative;
+    padding: 0 0.5rem;
+}
+
+.bar-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    height: 100%;
+    justify-content: flex-end;
+}
+
+.bar-wrapper {
+    position: relative;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+}
+
+.bar-tooltip {
+    position: absolute;
+    bottom: 100%;
+    margin-bottom: 0.5rem;
+    background-color: var(--blue-600);
+    color: white;
+    font-size: 0.625rem;
+    font-weight: 700;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+
+.bar-group:hover .bar-tooltip {
+    opacity: 1;
+}
+
+.bar {
+    width: 100%;
+    max-width: 40px;
+    background: linear-gradient(to top, var(--blue-700), var(--blue-400));
+    border-radius: 0.5rem;
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+    transition: transform 0.2s;
+    cursor: pointer;
+}
+
+.bar:hover {
+    transform: scaleY(1.05);
+    /* scale based on origin bottom handled by flex-end alignment usually, but transform applied to height wrapper in framer motion is better. Here we assume Framer Motion handles height. */
+}
+
+/* Framer motion handles height, so we just style the bar base */
+
+.bar-label {
+    font-size: 0.625rem;
+    color: var(--slate-500);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.chart-baseline {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 2.25rem;
+    /* approximate height of label + gap */
+    height: 1px;
+    background-color: rgba(51, 65, 85, 0.5);
+    /* slate-700/50 */
+    pointer-events: none;
+}
+
+/* Status Chart specific */
+.progress-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    flex: 1;
+    justify-content: center;
+}
+
+.progress-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+}
+
+.label-left {
+    color: var(--slate-400);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.label-right {
+    color: white;
+}
+
+.progress-track {
+    height: 1rem;
+    background-color: var(--slate-900);
+    border-radius: 9999px;
+    overflow: hidden;
+    padding: 0.25rem;
+    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+}
+
+.progress-bar {
+    height: 100%;
+    border-radius: 9999px;
+}
+
+.progress-bar.emerald {
+    background-color: var(--emerald-500);
+}
+
+.progress-bar.amber {
+    background-color: var(--amber-500);
+}
+
+.status-footer {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--slate-700);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.625rem;
+    font-weight: 700;
+    color: var(--slate-500);
+    text-transform: uppercase;
+}
+
+.footer-value {
+    color: var(--emerald-400);
+    font-family: monospace;
+}
+
+/* Vehicle Types */
+.vehicle-types-card {
+    background-color: var(--slate-800);
+    padding: 2rem;
+    border-radius: var(--border-radius-3xl);
+    border: 1px solid var(--slate-700);
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+}
+
+.header-icon-box {
+    padding: 0.5rem;
+    background-color: rgba(99, 102, 241, 0.1);
+    border-radius: var(--border-radius-lg);
+    color: var(--indigo-400);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vehicle-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+    .vehicle-stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .vehicle-stats-grid {
+        grid-template-columns: repeat(5, 1fr);
+    }
+}
+
+.vehicle-stat-item {
+    padding: 1rem;
+    background-color: rgba(15, 23, 42, 0.5);
+    /* slate-900/50 */
+    border-radius: var(--border-radius-2xl);
+    border: 1px solid var(--slate-800);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+}
+
+.vehicle-stat-item:hover {
+    border-color: rgba(99, 102, 241, 0.5);
+}
+
+.vehicle-type-label {
+    font-size: 0.625rem;
+    color: var(--slate-500);
+    font-weight: 700;
+    text-transform: uppercase;
+    text-align: center;
+    margin: 0;
+}
+
+.vehicle-count {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+}
+
+.vehicle-progress-track {
+    width: 100%;
+    height: 0.25rem;
+    background-color: var(--slate-800);
+    border-radius: 9999px;
+    margin-top: 0.5rem;
+    overflow: hidden;
+}
+
+.vehicle-progress-bar {
+    height: 100%;
+    background-color: var(--indigo-500);
+    border-radius: 9999px;
+}
+
+.no-data {
+    color: var(--slate-500);
+    grid-column: 1 / -1;
+    text-align: center;
+    font-style: italic;
+    padding: 1rem 0;
+}
+
+.loading-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+}
+
+.loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.loading-spinner {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    border-top: 2px solid var(--blue-500);
+    border-bottom: 2px solid var(--blue-500);
+    border-left: 2px solid transparent;
+    border-right: 2px solid transparent;
+    animation: spin 1s linear infinite;
+}
+
+.loading-text {
+    color: var(--slate-500);
+    font-weight: 500;
+    animation: pulse 2s infinite;
+}
