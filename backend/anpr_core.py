@@ -151,7 +151,7 @@ def run_demo():
     """
     # Replace URL with your Mobile IP Camera address
     # Example: CAMERA_URL = "http://10.158.157.64:4747/video"
-    CAMERA_URL = 0# Defaults to 0 for system testing with webcam
+    CAMERA_URL = 1# Defaults to 0 for system testing with webcam
     
     anpr = ANPRModule(stream_url=CAMERA_URL)
     
