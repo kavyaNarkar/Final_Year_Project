@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Wifi, MapPin, Minimize2, Cpu, BarChart, Settings, Share2, Camera } from 'lucide-react';
+import { ArrowLeft, Wifi, MapPin, Minimize2, Cpu, BarChart, Settings, Share2, Camera, Activity} from 'lucide-react';
 import api from '../../utils/api';
 
 import './LiveStream.css';
@@ -13,17 +13,26 @@ const LiveStream = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchStream = async () => {
+        const fetchCameraInfo = async () => {
             try {
-                const response = await api.get(`/api/admin/camera/${id}/stream`);
-                setStreamData(response.data);
+                // Do NOT use Axios to fetch the raw MJPEG stream, it will hang forever.
+                // We just need metadata for the header, the <img> tag will handle the MJPEG connection.
+                const response = await api.get('/api/admin/cameras');
+                const cam = response.data.find(c => c.id === parseInt(id));
+
+                if (cam) {
+                    setStreamData(cam);
+                } else {
+                    setStreamData({ location: "Live Node", status: "active" });
+                }
             } catch (err) {
-                console.error("Failed to fetch stream");
+                console.error("Failed to fetch camera metadata");
+                setStreamData({ location: "Unknown Location", status: "active" });
             } finally {
                 setLoading(false);
             }
         };
-        fetchStream();
+        fetchCameraInfo();
     }, [id]);
 
     if (loading || !streamData) return (
@@ -71,11 +80,22 @@ const LiveStream = () => {
                 {/* Main Viewport */}
                 <div className="viewport-column">
                     <div className="video-player-container">
-                        {/* Stream Mockup */}
+                        {/* Actual MJPEG Stream Rendering */}
                         <div className="stream-placeholder">
-                            <div className="stream-placeholder-content">
+                            <img
+                                src={`http://localhost:5000/api/admin/camera/${id}/stream`}
+                                
+                                alt={`Live Stream Node ${id}`}
+                                className="w-full h-full object-cover rounded-lg"
+                                onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'flex';
+                                }}
+                            />
+                            {/* Fallback if stream fails to load */}
+                            <div className="stream-placeholder-content" style={{ display: 'none', position: 'absolute', inset: 0, justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
                                 <Camera className="placeholder-icon" />
-                                <p className="stream-url">{streamData.stream_url}</p>
+                                <p className="stream-url text-red-400">Stream Connection Failed / Offline</p>
                             </div>
                         </div>
 
