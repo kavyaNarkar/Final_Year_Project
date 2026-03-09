@@ -51,9 +51,10 @@ class MainController:
         self.vehicle_detector = VehicleDetector(min_area=5000)
         
         # [CONFIG: VIRTUAL LINE ADJUSTMENT]
-        # Change this value to move the line. Higher = lower on screen
-        self.virtual_line_y_position = 350
-        self.signal_jump_detector = SignalJumpDetector(virtual_line_y=self.virtual_line_y_position)
+        # Change these points to move or angle the virtual line on the screen
+        self.virtual_line_p1 = (20, 350)
+        self.virtual_line_p2 = (620, 350)
+        self.signal_jump_detector = SignalJumpDetector(line_p1=self.virtual_line_p1, line_p2=self.virtual_line_p2)
         
         self.anpr_processor = ANPRProcessor()
         self.last_early_capture_time = 0.0
@@ -195,10 +196,11 @@ class MainController:
                 
                 # [VIRTUAL LINE DRAWING (ADMIN VIEW)]
                 # Prominently drawn in bright YELLOW so Admin can visually adjust it
-                line_y = self.signal_jump_detector.virtual_line_y
-                cv2.line(display_frame, (0, line_y), (width, line_y), (0, 255, 255), 3) # Yellow Line
+                lp1 = self.signal_jump_detector.line_p1
+                lp2 = self.signal_jump_detector.line_p2
+                cv2.line(display_frame, lp1, lp2, (0, 255, 255), 3) # Yellow Line
                 cv2.putText(display_frame, "VIRTUAL STOP LINE", 
-                            (15, line_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+                            (lp1[0] + 15, lp1[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
                 
                 # Admin UI Tags
                 cv2.putText(display_frame, f"Signal Layer: TEMPORARILY DISABLED", 
