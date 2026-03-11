@@ -25,6 +25,7 @@ from modules.film_detection import FilmDetector
 from modules.anpr import ANPRProcessor
 from modules.challan_generator import ChallanGenerator
 from modules.notifier import Notifier
+from modules.signal_reader import SignalReader
 
 # [GLOBAL CONFIGURATION]
 # Set the Camera URL here (0 or 1 for local webcams, or an RTSP/HTTP URL for IP cameras)
@@ -55,11 +56,12 @@ class MainController:
         self.virtual_line_p1 = (20, 350)
         self.virtual_line_p2 = (620, 350)
         self.signal_jump_detector = SignalJumpDetector(line_p1=self.virtual_line_p1, line_p2=self.virtual_line_p2)
+        self.signal_reader = SignalReader()
         
         self.anpr_processor = ANPRProcessor()
         self.last_early_capture_time = 0.0
         self.challan_generator = ChallanGenerator(self.app)
-        self.notifier = Notifier()
+        self.notifier = Notifier(self.app)
         
         # Additional Extensibility hooks
         self.speed_detector = SpeedDetector()
@@ -70,11 +72,13 @@ class MainController:
         Event-Triggered processing function detached to a Daemon thread.
         Never breaks continuous Stream flow.
         """
-        print(f"\n[EVENT PROCESSING] Executing '{violation_type}' logic.")
+        # Ensure uploads/violations exists
+        os.makedirs("uploads/violations", exist_ok=True)
+        
         session_id = str(uuid.uuid4())[:8]
-        video_path = f"uploads/videos/violation_{session_id}.mp4"
-        best_frame_path = f"uploads/images/best_frame_{session_id}.jpg"
-        plate_path = f"uploads/plates/plate_{session_id}.jpg"
+        video_path = f"uploads/violations/{session_id}.mp4"
+        best_frame_path = f"uploads/violations/{session_id}_vehicle.jpg"
+        plate_path = f"uploads/violations/{session_id}_plate.jpg"
         
         # Write Video (Evidence) explicitly
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -102,7 +106,7 @@ class MainController:
             
             if challan_id:
                 print(f"[DB] Inserted Challan #{challan_id} successfully.")
-                self.notifier.notify_user(owner_name, violation_type)
+                self.notifier.notify_user(owner_name, violation_type, vehicle_number=detected_plate)
         else:
             print("[WARNING] Could not salvage OCR from video clipping.")
 
@@ -131,6 +135,16 @@ class MainController:
         recorded_frames = []
         frame_count = 0
         
+        # Threaded stream reading
+        self.stream_ret = False
+        self.stream_frame = None
+        self.stream_thread_obj = threading.Thread(target=self._update_stream, args=(cap,), daemon=True)
+        self.stream_thread_obj.start()
+        
+        # Wait until first frame is ready
+        while not self.stream_ret and not self.stop_requested:
+            time.sleep(0.1)
+        
         print("\n" + "="*50)
         print("          LIVE MONITORING ACTIVE SERVER   ")
         print(" Press 'q' or 'Ctrl+Q' in window to exit  ")
@@ -138,8 +152,8 @@ class MainController:
         
         try:
             while not self.stop_requested:
-                ret, frame = cap.read()
-                if not ret:
+                ret, frame = self.stream_ret, self.stream_frame
+                if not ret or frame is None:
                     if isinstance(CAMERA_URL, str) and not CAMERA_URL.startswith("http"):
                         cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                         continue
@@ -147,6 +161,8 @@ class MainController:
                     time.sleep(1)
                     continue
                     
+                # Resize frame for better stream/processing performance
+                frame = cv2.resize(frame, (width, height))
                 frame_count += 1
                 
                 if is_recording:
@@ -166,8 +182,8 @@ class MainController:
                 else:
                     buffered_frames.append(frame)
                     
-                    # Offload cycles - process rules strictly every 3rd step
-                    if frame_count % 3 == 0:
+                    # Offload cycles - process rules strictly every 2nd step
+                    if frame_count % 2 == 0:
                         vehicles = self.vehicle_detector.detect(frame)
                         
                         if vehicles:
@@ -185,8 +201,9 @@ class MainController:
                                         self.last_early_capture_time = time.time()
                             
                             is_signal_jump = self.signal_jump_detector.check_violation(vehicles)
+                            current_signal_state = self.signal_reader.get_state()
                             
-                            if is_signal_jump:
+                            if is_signal_jump and current_signal_state == "RED":
                                 is_recording = True
                                 recording_start_time = time.time()
                                 recorded_frames = list(buffered_frames) + [frame]
@@ -203,11 +220,17 @@ class MainController:
                             (lp1[0] + 15, lp1[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
                 
                 # Admin UI Tags
-                cv2.putText(display_frame, f"Signal Layer: TEMPORARILY DISABLED", 
-                            (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+                current_signal = self.signal_reader.get_state()
+                signal_color = (0, 0, 255) if current_signal == "RED" else ((0, 255, 255) if current_signal == "YELLOW" else (0, 255, 0))
+                cv2.putText(display_frame, f"Current Signal: {current_signal}", 
+                            (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, signal_color, 2)
                             
                 cv2.putText(display_frame, f"Status: {'RECORDING' if is_recording else 'MONITORING'}", 
                             (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255) if is_recording else (0,255,0), 2)
+                
+                # FPS calculation
+                cv2.putText(display_frame, f"FPS: {int(fps)}", 
+                            (display_frame.shape[1] - 120, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
                 # Expose frame to memory for endpoints
                 self.display_frame = display_frame.copy()
                 
@@ -217,8 +240,18 @@ class MainController:
         except Exception as e:
             print(f"\n[SYSTEM] Server interrupted forcefully. {e}")
         finally:
+            self.stop_requested = True
             cap.release()
             print("[SYSTEM] Safe Exit complete. Streams offline.")
+
+    def _update_stream(self, cap):
+        while not self.stop_requested:
+            if cap.isOpened():
+                ret, frame = cap.read()
+                self.stream_ret = ret
+                if ret:
+                    self.stream_frame = frame
+            time.sleep(0.01)
 
 if __name__ == "__main__":
     controller = MainController()

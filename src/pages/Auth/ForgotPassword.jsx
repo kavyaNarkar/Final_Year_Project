@@ -1,19 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Phone, Key, Lock, ArrowRight, ArrowLeft, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { ShieldCheck, Mail, Key, Lock, ArrowRight, ArrowLeft, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import api from '../../utils/api';
 
 const ForgotPassword = () => {
     const navigate = useNavigate();
-    const [step, setStep] = useState(1); // 1: Mobile+Role, 2: OTP, 3: New Password, 4: Success
+    const [step, setStep] = useState(1); // 1: Email, 2: OTP, 3: New Password, 4: Success
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [message, setMessage] = useState(null);
 
     // Form States
-    const [role, setRole] = useState('user');
-    const [mobile, setMobile] = useState('');
+    const [email, setEmail] = useState('');
     const [otp, setOtp] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -40,12 +39,11 @@ const ForgotPassword = () => {
         setError(null);
 
         try {
-            const response = await api.post('/api/auth/forgot-password', { mobile_number: mobile, role });
-            // In a real app, OTP is sent to phone. Here we might get demo OTP in response or just proceed.
+            const response = await api.post('/api/auth/forgot-password', { email });
             if (response.data.success) {
-                setMessage(response.data.demo_otp ? `OTP sent to ${mobile} (Demo OTP: ${response.data.demo_otp})` : response.data.message || `OTP sent to ${mobile}`);
+                setMessage(response.data.message || `OTP sent to ${email}`);
             } else {
-                setMessage(`OTP sent to ${mobile}`);
+                setMessage(`OTP sent to ${email}`);
             }
             setStep(2);
             setTimer(30);
@@ -63,7 +61,7 @@ const ForgotPassword = () => {
         setError(null);
 
         try {
-            await api.post('/api/auth/verify-otp', { mobile_number: mobile, role, otp });
+            await api.post('/api/auth/verify-otp', { email, otp });
             setStep(3);
             setMessage(null);
         } catch (err) {
@@ -85,9 +83,8 @@ const ForgotPassword = () => {
 
         try {
             await api.post('/api/auth/reset-password', {
-                mobile_number: mobile,
-                role,
-                otp, // Send OTP again for verification context
+                email,
+                otp,
                 password: newPassword
             });
             setStep(4);
@@ -105,11 +102,11 @@ const ForgotPassword = () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await api.post('/api/auth/forgot-password', { mobile_number: mobile, role });
+            const response = await api.post('/api/auth/forgot-password', { email });
             if (response.data.success) {
-                setMessage(response.data.message || `OTP resent to ${mobile}`);
+                setMessage(response.data.message || `OTP resent to ${email}`);
             } else {
-                setMessage(`OTP resent to ${mobile}`);
+                setMessage(`OTP resent to ${email}`);
             }
             setTimer(30);
             setCanResend(false);
@@ -140,8 +137,8 @@ const ForgotPassword = () => {
                 <div className="text-center mb-8">
                     <h2 className="text-2xl font-bold text-white mb-2">Password Recovery</h2>
                     <p className="text-slate-300 text-sm">
-                        {step === 1 && "Enter your details to receive OTP"}
-                        {step === 2 && "Enter the verification code sent to your mobile"}
+                        {step === 1 && "Enter your email to receive OTP"}
+                        {step === 2 && "Enter the verification code sent to your email"}
                         {step === 3 && "Create a new strong password"}
                         {step === 4 && "Password updated successfully!"}
                     </p>
@@ -180,39 +177,17 @@ const ForgotPassword = () => {
                             className="space-y-6"
                         >
                             <div className="space-y-4">
-                                <div>
-                                    <label className="text-sm font-medium text-slate-300 block mb-2">Select Valid Role</label>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <button
-                                            type="button"
-                                            onClick={() => setRole('user')}
-                                            className={`py-3 rounded-xl border font-semibold transition-all ${role === 'user' ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-600/20' : 'bg-slate-700/50 border-slate-600/50 text-slate-400 hover:bg-slate-700'}`}
-                                        >
-                                            User
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setRole('admin')}
-                                            className={`py-3 rounded-xl border font-semibold transition-all ${role === 'admin' ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-600/20' : 'bg-slate-700/50 border-slate-600/50 text-slate-400 hover:bg-slate-700'}`}
-                                        >
-                                            Admin
-                                        </button>
-                                    </div>
-                                </div>
-
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-300">Registered Mobile Number</label>
+                                    <label className="text-sm font-medium text-slate-300">Registered Email Address</label>
                                     <div className="relative">
-                                        <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                                         <input
-                                            type="tel"
-                                            placeholder="e.g. 9876543210"
+                                            type="email"
+                                            placeholder="e.g. yourname@example.com"
                                             className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                                            value={mobile}
-                                            onChange={(e) => setMobile(e.target.value)}
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
                                             required
-                                            pattern="[0-9]{10}"
-                                            title="10 digit mobile number"
                                         />
                                     </div>
                                 </div>
@@ -246,7 +221,7 @@ const ForgotPassword = () => {
                                     <input
                                         type="text"
                                         placeholder="Enter 6-digit code"
-                                        className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all tracking-widest text-lg"
+                                        className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all tracking-widest text-lg text-center"
                                         value={otp}
                                         onChange={(e) => setOtp(e.target.value)}
                                         required
@@ -281,7 +256,7 @@ const ForgotPassword = () => {
                                 onClick={() => setStep(1)}
                                 className="w-full text-slate-400 text-sm hover:text-white transition-colors flex items-center justify-center gap-1"
                             >
-                                <ArrowLeft className="w-3 h-3" /> Change Number
+                                <ArrowLeft className="w-3 h-3" /> Change Email
                             </button>
                         </motion.form>
                     )}

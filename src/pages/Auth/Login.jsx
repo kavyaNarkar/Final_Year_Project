@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import bgImage from '../../assets/bg-image.png';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, User, Lock, ArrowRight, AlertCircle } from 'lucide-react';
@@ -29,7 +30,7 @@ const Login = () => {
                     navigate('/user/dashboard');
                 }
             } else {
-                setError(result.message || 'Login failed');
+                setError(result.message || 'Invalid credentials');
             }
         } catch (err) {
             setError('An unexpected error occurred. Please try again.');
@@ -38,7 +39,7 @@ const Login = () => {
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 relative overflow-hidden">
-            <div className="absolute inset-0 z-0 bg-cover bg-center filter opacity-20 pointer-events-none" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80')" }}></div>
+            <div className="absolute inset-0 z-0 bg-cover bg-center filter opacity-20 pointer-events-none" style={{ backgroundImage: `url(${bgImage})` }}></div>
             <motion.div
                 initial={{ y: -50, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}

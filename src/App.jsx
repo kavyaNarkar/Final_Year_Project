@@ -18,6 +18,7 @@ import MyChallans from './pages/User/MyChallans';
 import ChallanDetails from './pages/User/ChallanDetails';
 import ReportChallan from './pages/User/ReportChallan';
 import PaymentHistory from './pages/User/PaymentHistory';
+import Payment from './pages/User/Payment';
 import Profile from './pages/User/Profile';
 import Support from './pages/User/Support';
 import NotFound from './pages/NotFound';
@@ -37,6 +38,15 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/admin-signup" element={<AdminSignup />} />
+
+        {/* Payment Route */}
+        <Route path="/payment" element={
+          <ProtectedRoute role="user">
+            <DashboardLayout role="user" />
+          </ProtectedRoute>
+        }>
+          <Route path=":challanId" element={<Payment />} />
+        </Route>
 
         {/* Admin Routes */}
         <Route path="/admin" element={

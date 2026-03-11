@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Video, MapPin, Search } from 'lucide-react'; // Using lucide-react icons
 
+
 const Splash = () => {
     const navigate = useNavigate();
 
@@ -16,7 +17,7 @@ const Splash = () => {
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden relative">
-            <div className="absolute inset-0 z-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1494515843206-f3117d3f51b7?ixlib=rb-4.0.3&auto=format&fit=crop&w=2072&q=80')] bg-cover bg-center filter blur-sm"></div>
+            {/* <div className="absolute inset-0 z-0 opacity-20 bg-[url('C:\Users\Santosh\Desktop\eChallan\Final_Year_Project\traffic system image.png')] bg-cover bg-center filter blur-sm"></div> */}
 
             <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}

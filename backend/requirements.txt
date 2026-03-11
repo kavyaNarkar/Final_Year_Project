@@ -10,3 +10,4 @@ pandas
 easyocr
 imutils
 marshmallow
+pyserial

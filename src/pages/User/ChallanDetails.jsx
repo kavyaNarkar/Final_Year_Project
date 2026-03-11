@@ -28,14 +28,8 @@ const ChallanDetails = () => {
         fetchChallan();
     }, [id]);
 
-    const handlePay = async () => {
-        try {
-            await api.post('/api/user/pay-challan', { challan_id: id });
-            alert("Payment Successful!");
-            window.location.reload(); // Reload to update status
-        } catch (err) {
-            alert(err.response?.data?.error || "Payment Failed");
-        }
+    const handlePayClick = () => {
+        navigate(`/payment/${id}`);
     };
 
     if (loading) return (
@@ -108,7 +102,7 @@ const ChallanDetails = () => {
                             {challan.video ? (
                                 <div className="video-container">
                                     <video
-                                        src={challan.video}
+                                        src={challan.video ? `http://localhost:5000/${challan.video}` : ''}
                                         poster={challan.image ? `http://localhost:5000/${challan.image}` : ''}
                                         controls
                                         className="video-player"
@@ -166,7 +160,7 @@ const ChallanDetails = () => {
 
                         {challan.status !== 'paid' ? (
                             <button
-                                onClick={handlePay}
+                                onClick={handlePayClick}
                                 className="action-btn-pay"
                             >
                                 <CreditCard className="w-5 h-5" /> Pay Now (₹{challan.amount})

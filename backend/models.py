@@ -39,6 +39,9 @@ class User(db.Model):
     vehicle_number = db.Column(db.String(20), db.ForeignKey('vehicle.vehicle_number'), nullable=False)
     role = db.Column(db.String(10), default='user')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    email_verified = db.Column(db.Boolean, default=False)
+    otp_code = db.Column(db.String(6), nullable=True)
+    otp_expiry_time = db.Column(db.DateTime, nullable=True)
 
 class Admin(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -76,6 +79,7 @@ class Violation(db.Model):
     confidence_score = db.Column(db.Float, default=0.0)
     payment_date = db.Column(db.DateTime, nullable=True)
     transaction_id = db.Column(db.String(100), nullable=True)
+    payment_status = db.Column(db.String(20), default='UNPAID')
 
 class Payment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -113,7 +117,7 @@ class Report(db.Model):
 
 class OTPStore(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    mobile_number = db.Column(db.String(15), nullable=False)
+    identifier = db.Column(db.String(120), nullable=False) # e.g. email or mobile
     role = db.Column(db.String(10), nullable=False) # user or admin
     otp = db.Column(db.String(6), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

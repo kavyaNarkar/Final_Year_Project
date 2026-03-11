@@ -91,22 +91,77 @@ def register_user():
         db.session.add(mock_vehicle)
         db.session.commit()
 
-    if User.query.filter_by(email=data['email']).first():
-        return jsonify({"error": "Email already registered"}), 409
+    email = data['email']
+    user = User.query.filter_by(email=email).first()
+    
+    otp = str(random.randint(100000, 999999))
+    expires_at = datetime.utcnow() + timedelta(minutes=5)
+    
+    if user:
+        if user.email_verified:
+            return jsonify({"error": "Email already registered"}), 409
+        else:
+            # User exists but not verified. Update OTP
+            user.otp_code = otp
+            user.otp_expiry_time = expires_at
+            user.first_name = data['firstName']
+            user.last_name = data['lastName']
+            user.password = hashed_password
+            user.phone_number = data['phoneNumber']
+            user.vehicle_number = data['vehicleNumber'].upper()
+    else:
+        new_user = User(
+            first_name=data['firstName'],
+            last_name=data['lastName'],
+            email=email,
+            password=hashed_password,
+            phone_number=data['phoneNumber'],
+            vehicle_number=data['vehicleNumber'].upper(),
+            email_verified=False,
+            otp_code=otp,
+            otp_expiry_time=expires_at
+        )
+        db.session.add(new_user)
+        
+    try:
+        db.session.commit()
+        from services.email_service import send_otp_email
+        send_otp_email(email, otp)
+        return jsonify({"message": "Registration initiated. Pending OTP verification."}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
-    new_user = User(
-        first_name=data['firstName'],
-        last_name=data['lastName'],
-        email=data['email'],
-        password=hashed_password,
-        phone_number=data['phoneNumber'],
-        vehicle_number=data['vehicleNumber'].upper()
-    )
+@app.route('/api/auth/verify-registration-otp', methods=['POST'])
+def verify_registration_otp():
+    data = request.json
+    email = data.get('email')
+    otp = data.get('otp')
+    
+    if not email or not otp:
+        return jsonify({"error": "Missing email or OTP"}), 400
+        
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+        
+    if user.email_verified:
+        return jsonify({"message": "Registration successful"}), 200
+        
+    if user.otp_code != otp:
+        return jsonify({"error": "Invalid OTP"}), 400
+        
+    if user.otp_expiry_time and datetime.utcnow() > user.otp_expiry_time:
+        return jsonify({"error": "OTP expired. Please register again."}), 400
+        
+    # Verify successful
+    user.email_verified = True
+    user.otp_code = None
+    user.otp_expiry_time = None
     
     try:
-        db.session.add(new_user)
         db.session.commit()
-        return jsonify({"message": "User registered successfully"}), 201
+        return jsonify({"message": "Registration successful"}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
@@ -154,49 +209,44 @@ def login():
     # Try User Login Step (Email or Vehicle Number?) -> Standard is Email/Phone usually
     user = User.query.filter(User.email == identifier).first()
     if user and bcrypt.check_password_hash(user.password, password):
+        if not getattr(user, 'email_verified', True):  # Fallback to True if column missing
+            return jsonify({"error": "Email not verified. Please verify your email first."}), 403
+            
         return jsonify({
             "message": "Login successful",
             "user": {"name": f"{user.first_name} {user.last_name}", "role": "user", "email": user.email, "vehicle": user.vehicle_number, "id": user.id},
             "token": "fake-jwt-token-user"
         }), 200
 
+    return jsonify({"error": "Invalid credentials"}), 401
+
 @app.route('/api/auth/forgot-password', methods=['POST'])
 def forgot_password():
     data = request.json
-    mobile = data.get('mobile_number')
-    role = data.get('role')
-
-    if not mobile or not role:
-        return jsonify({"error": "Mobile number and role are required"}), 400
+    email = data.get('email')
+    
+    if not email:
+        return jsonify({"error": "Email address is required"}), 400
 
     user_found = False
+    role = 'user'
     
     # Check if user/admin exists
-    if role == 'user':
-        # In User model it's phone_number
-        if User.query.filter_by(phone_number=mobile).first():
-            user_found = True
-    elif role == 'admin':
-        # In Admin model it's mobile_number (we just added it)
-        if Admin.query.filter_by(mobile_number=mobile).first():
-            user_found = True
-    else:
-        return jsonify({"error": "Invalid role"}), 400
+    if User.query.filter_by(email=email).first():
+        user_found = True
+    elif Admin.query.filter_by(email=email).first():
+        user_found = True
+        role = 'admin'
 
     if not user_found:
-        # Security: Don't reveal if number exists or not, but for UX purposes here we might want to say "User not found"
-        # The prompt says: "If mobile number not found -> show error message"
-        return jsonify({"error": "Mobile number not registered for this role"}), 404
+        return jsonify({"error": "Email not registered"}), 404
 
     # Generate OTP
     otp = str(random.randint(100000, 999999)) # 6 digits
-    expires_at = datetime.utcnow() + timedelta(minutes=2)
+    expires_at = datetime.utcnow() + timedelta(minutes=5)
 
-    # Store OTP
-    # Check if existing valid OTP exists? We can overwrite or create new.
-    # Let's create new.
     otp_entry = OTPStore(
-        mobile_number=mobile,
+        identifier=email,
         role=role,
         otp=otp,
         created_at=datetime.utcnow(),
@@ -207,35 +257,14 @@ def forgot_password():
         db.session.add(otp_entry)
         db.session.commit()
         
-        # Real SMS Gateway implementation (Fast2SMS Example)
-        sms_api_key = os.environ.get("SMS_API_KEY")
-        if not sms_api_key:
-            # Revert because we can't send
-            db.session.delete(otp_entry)
-            db.session.commit()
-            return jsonify({"success": False, "error": "Failed to send OTP. Please try again."}), 500
-            
-        url = "https://www.fast2sms.com/dev/bulkV2"
-        message = f"Your OTP for password reset is: {otp}.\nValid for 2 minutes."
-        params = {
-            "authorization": sms_api_key,
-            "route": "q",
-            "message": message,
-            "flash": 0,
-            "numbers": mobile
-        }
+        from services.email_service import send_otp_email
+        send_success = send_otp_email(email, otp)
         
-        response = requests.get(url, params=params)
-        
-        # Checking if Fast2SMS successfully queued the message
-        # If response.ok and 'return': True in the JSON (Fast2SMS convention)
-        if response.status_code == 200 and response.json().get("return"):
-            print(f"SMS sent to {mobile} successfully.")
+        if send_success:
             return jsonify({"success": True, "message": "OTP sent successfully"}), 200
         else:
             db.session.delete(otp_entry)
             db.session.commit()
-            print(f"SMS API Error: {response.text}")
             return jsonify({"success": False, "error": "Failed to send OTP. Please try again."}), 500
             
     except Exception as e:
@@ -245,15 +274,14 @@ def forgot_password():
 @app.route('/api/auth/verify-otp', methods=['POST'])
 def verify_otp():
     data = request.json
-    mobile = data.get('mobile_number')
-    role = data.get('role')
+    email = data.get('email')
     otp = data.get('otp')
 
-    if not mobile or not role or not otp:
+    if not email or not otp:
         return jsonify({"error": "Missing required fields"}), 400
 
     # Find Latest OTP
-    record = OTPStore.query.filter_by(mobile_number=mobile, role=role).order_by(OTPStore.created_at.desc()).first()
+    record = OTPStore.query.filter_by(identifier=email).order_by(OTPStore.created_at.desc()).first()
 
     if not record:
         return jsonify({"error": "Invalid OTP"}), 400
@@ -264,21 +292,20 @@ def verify_otp():
     if datetime.utcnow() > record.expires_at:
         return jsonify({"error": "OTP expired. Please resend OTP."}), 400
 
-    return jsonify({"message": "OTP verified successfully"}), 200
+    return jsonify({"message": "OTP verified successfully", "role": record.role}), 200
 
 @app.route('/api/auth/reset-password', methods=['POST'])
 def reset_password():
     data = request.json
-    mobile = data.get('mobile_number')
-    role = data.get('role')
+    email = data.get('email')
     password = data.get('password')
-    otp = data.get('otp') # Re-verify OTP to ensure security (stateless)
+    otp = data.get('otp')
     
-    if not mobile or not role or not password or not otp:
+    if not email or not password or not otp:
         return jsonify({"error": "Missing required fields"}), 400
 
     # Re-verify OTP one more time before update
-    record = OTPStore.query.filter_by(mobile_number=mobile, role=role).order_by(OTPStore.created_at.desc()).first()
+    record = OTPStore.query.filter_by(identifier=email).order_by(OTPStore.created_at.desc()).first()
     if not record or record.otp != otp:
         return jsonify({"error": "Invalid Session/OTP"}), 400
         
@@ -288,20 +315,17 @@ def reset_password():
     hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
     
     try:
-        if role == 'user':
-            user = User.query.filter_by(phone_number=mobile).first()
+        if record.role == 'user':
+            user = User.query.filter_by(email=email).first()
             if user:
                 user.password = hashed_password
-                db.session.commit()
-                # Invalidate OTP
                 db.session.delete(record)
                 db.session.commit()
                 return jsonify({"message": "Password reset successfully"}), 200
-        elif role == 'admin':
-            admin = Admin.query.filter_by(mobile_number=mobile).first()
+        elif record.role == 'admin':
+            admin = Admin.query.filter_by(email=email).first()
             if admin:
                 admin.password = hashed_password
-                db.session.commit()
                 db.session.delete(record)
                 db.session.commit()
                 return jsonify({"message": "Password reset successfully"}), 200
@@ -512,6 +536,7 @@ def pay_challan():
     
     # Simulate payment
     challan.status = 'paid'
+    challan.payment_status = 'PAID'
     challan.payment_date = datetime.utcnow()
     challan.transaction_id = f"TRX-{uuid.uuid4().hex[:8].upper()}"
     
