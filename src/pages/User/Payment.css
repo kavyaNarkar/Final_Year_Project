@@ -111,29 +111,6 @@
     /* red for fine */
 }
 
-.qr-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 32px;
-    padding: 24px;
-    background: white;
-    border-radius: 12px;
-}
-
-.payment-qr-image {
-    width: 250px;
-    height: 250px;
-    object-fit: contain;
-    margin-bottom: 16px;
-}
-
-.qr-instruction {
-    color: #475569;
-    font-size: 14px;
-    font-weight: 500;
-}
 
 .payment-actions {
     display: flex;

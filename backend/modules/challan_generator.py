@@ -16,7 +16,11 @@ class ChallanGenerator:
             owner_name = "Unknown Owner"
             vehicle_model = "Unknown Model"
             
-            is_valid_plate = (plate_number and plate_number != "UNKNOWN")
+            is_valid_plate = (plate_number and plate_number != "UNKNOWN" and len(plate_number) > 3)
+            
+            if not is_valid_plate:
+                print(f"[INFO] Strict ANPR Validation: No valid plate recognized ({plate_number}). Challan NOT generated.")
+                return None, None
             
             if is_valid_plate:
                 vehicle = Vehicle.query.filter_by(vehicle_number=plate_number).first()

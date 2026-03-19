@@ -7,20 +7,35 @@
 }
 
 .dashboard-header {
-    margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--slate-800);
 }
 
 .dashboard-title {
-    font-size: 1.5rem;
-    font-weight: 700;
+    font-size: 1.875rem;
+    font-weight: 800;
     color: white;
     margin: 0;
+    letter-spacing: -0.025em;
 }
 
 .dashboard-subtitle {
     color: var(--slate-400);
-    font-size: 0.875rem;
+    font-size: 0.95rem;
     margin: 0;
+    font-weight: 500;
+}
+
+@media (max-width: 768px) {
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
 }
 
 /* Stats Grid */
@@ -44,6 +59,13 @@
     position: relative;
     overflow: hidden;
     height: 100%;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stat-card:hover {
+    transform: translateY(-6px);
+    border-color: var(--slate-600);
+    box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.5);
 }
 
 .stat-bg-icon {
@@ -225,12 +247,12 @@
 }
 
 .recent-item {
-    padding: 1rem;
-    border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.4);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    transition: background-color 0.2s;
+    transition: all 0.2s ease;
 }
 
 .recent-item:last-child {
@@ -238,7 +260,7 @@
 }
 
 .recent-item:hover {
-    background-color: rgba(51, 65, 85, 0.3);
+    background-color: rgba(255, 255, 255, 0.03);
 }
 
 .recent-item-left {

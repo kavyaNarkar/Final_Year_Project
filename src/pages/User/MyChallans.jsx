@@ -9,10 +9,10 @@ import './MyChallans.css';
 const MyChallans = () => {
     const [challans, setChallans] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('unpaid'); // default to unpaid
     const navigate = useNavigate();
 
     useEffect(() => {
-        // Fetch challans...
         fetchChallans();
     }, []);
 
@@ -28,22 +28,34 @@ const MyChallans = () => {
         }
     };
 
+    const filteredChallans = challans.filter(c => {
+        if (activeTab === 'all') return true;
+        if (activeTab === 'unpaid') return c.status === 'pending';
+        if (activeTab === 'paid') return c.status === 'paid';
+        return true;
+    });
+
     return (
         <div className="my-challans-container">
             <header className="page-header">
-                {/* Note: In dark mode layout, text-slate-900 might be invisible if background is slate-900. 
-                    However, the component used 'text-slate-900' in the original code. 
-                    If the layout background is dark, this text would be hard to read unless the container has a light background.
-                    The original code had `className="p-6 max-w-7xl mx-auto space-y-8"`.
-                    It didn't set a background. 
-                    If DashboardLayout sets `bg-slate-900`, then `text-slate-900` on top of it is bad.
-                    BUT I must preserve existing behavior.
-                    Maybe the user intends this to be a light page?
-                    Or maybe I missed where background is set. 
-                    Regardless, I will map class names 1:1.
-                */}
                 <h1 className="page-title">My Challans</h1>
-                <p className="page-subtitle">View and manage your traffic violations</p>
+                <p className="page-subtitle">Track and manage your traffic violations</p>
+                
+                <div className="status-tabs">
+                    {[
+                        { id: 'unpaid', label: 'Unpaid', count: challans.filter(c => c.status === 'pending').length },
+                        { id: 'paid', label: 'Paid', count: challans.filter(c => c.status === 'paid').length },
+                        { id: 'all', label: 'All', count: challans.length },
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+                        >
+                            {tab.label} <span className="tab-count">{tab.count}</span>
+                        </button>
+                    ))}
+                </div>
             </header>
 
             {loading ? (
@@ -57,7 +69,7 @@ const MyChallans = () => {
                 </div>
             ) : (
                 <div className="challans-grid">
-                    {challans.map((challan) => (
+                    {filteredChallans.map((challan) => (
                         <motion.div
                             key={challan.id}
                             initial={{ opacity: 0, y: 20 }}
@@ -82,14 +94,28 @@ const MyChallans = () => {
 
                             <div className="card-body">
                                 <div className="card-top-row">
-                                    <h3 className="violation-type-text">{challan.type}</h3>
+                                    <div className="type-group">
+                                        <h3 className="violation-type-text">{challan.type}</h3>
+                                        <p className="plate-id font-mono text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                                            {challan.vehicle_number}
+                                        </p>
+                                    </div>
                                     <div className="action-menu-wrapper" onClick={(e) => {
                                         e.stopPropagation();
-                                        navigate(`/user/challan/${challan.id}/report`);
                                     }}>
-                                        <button className="menu-icon-btn">
-                                            <MoreVertical className="w-5 h-5" />
-                                        </button>
+                                        <div className="dropdown">
+                                            <button className="menu-icon-btn group">
+                                                <MoreVertical className="w-5 h-5 text-slate-400 group-hover:text-slate-600" />
+                                            </button>
+                                            <div className="dropdown-content">
+                                                <button 
+                                                    onClick={() => navigate(`/user/challan/${challan.id}/report`)}
+                                                    className="dropdown-item"
+                                                >
+                                                    Report Challan
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -103,6 +129,17 @@ const MyChallans = () => {
                                     </div>
                                 </div>
 
+                                {challan.plate_crop && (
+                                    <div className="plate-preview-box">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Cropped Plate</p>
+                                        <img 
+                                            src={`http://localhost:5000/${challan.plate_crop}`} 
+                                            alt="Plate Crop" 
+                                            className="h-8 rounded border border-slate-100 object-contain bg-slate-50"
+                                        />
+                                    </div>
+                                )}
+
                                 <div className="card-footer">
                                     <div>
                                         <p className="fine-label">Fine Amount</p>
@@ -110,7 +147,7 @@ const MyChallans = () => {
                                     </div>
                                     {challan.report_status && (
                                         <div className="report-status-pill">
-                                            Report: {challan.report_status}
+                                            {challan.report_status}
                                         </div>
                                     )}
                                 </div>

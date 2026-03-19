@@ -7,6 +7,7 @@ import { ShieldCheck, User, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 
 const Login = () => {
     const [formData, setFormData] = useState({ identifier: '', password: '' });
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
     const { login } = useAuth();
     const navigate = useNavigate();
@@ -20,6 +21,9 @@ const Login = () => {
         e.preventDefault();
         if (!formData.identifier || !formData.password) return;
 
+        setIsLoading(true);
+        setError(null);
+
         try {
             const result = await login(formData.identifier, formData.password);
 
@@ -30,10 +34,16 @@ const Login = () => {
                     navigate('/user/dashboard');
                 }
             } else {
-                setError(result.message || 'Invalid credentials');
+                setError(result.message || 'Invalid Credentials');
             }
         } catch (err) {
-            setError('An unexpected error occurred. Please try again.');
+            if (!err.response) {
+                setError('Server Error – Backend Not Connected');
+            } else {
+                setError('Invalid Credentials');
+            }
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -112,9 +122,19 @@ const Login = () => {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         type="submit"
-                        className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg text-white font-semibold text-lg hover:from-blue-500 hover:to-indigo-500 shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition-all mt-4"
+                        disabled={isLoading}
+                        className={`w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg text-white font-semibold text-lg hover:from-blue-500 hover:to-indigo-500 shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition-all mt-4 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
                     >
-                        Sign In <ArrowRight className="w-5 h-5" />
+                        {isLoading ? (
+                            <>
+                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                Authenticating...
+                            </>
+                        ) : (
+                            <>
+                                Sign In <ArrowRight className="w-5 h-5" />
+                            </>
+                        )}
                     </motion.button>
                 </form>
 

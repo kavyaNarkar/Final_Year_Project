@@ -9,11 +9,27 @@ class Notifier:
         """
         self.app = app
 
-    def notify_user(self, owner_name, violation_type, vehicle_number=None, fine_amount=500.0):
+    def notify_user(self, owner_name, violation_type, vehicle_number=None, fine_amount=500.0, challan_id=None):
         """
         Instantly alert the detected owner without blocking thread processes.
         """
         if owner_name and owner_name != "Unknown Owner" and vehicle_number:
+            # Emit real-time notification via SocketIO
+            try:
+                from flask_socketio import emit
+                from app import socketio
+                # Important: must be inside app context or use socketio.emit directly if not in request
+                socketio.emit('new_violation', {
+                    'vehicle': vehicle_number,
+                    'violation': violation_type,
+                    'fine': f"₹{fine_amount}",
+                    'id': challan_id,
+                    'display_id': f"#V-{1000 + challan_id}" if challan_id else None
+                }, namespace='/')
+                print(f"[LIVE SOCKET] Emitted violation event for {vehicle_number}")
+            except Exception as e:
+                print(f"[LIVE SOCKET ERROR] Could not emit: {e}")
+
             print("\n" + "*"*45)
             print(f"[LIVE EMAIL ALERT] Notification initiated.")
             print(f"To Owner: {owner_name} ({vehicle_number})")

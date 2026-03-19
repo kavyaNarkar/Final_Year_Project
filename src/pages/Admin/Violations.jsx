@@ -33,7 +33,7 @@ const Violations = () => {
 
     const getStatusClass = (type) => {
         if (type === 'Speeding') return 'speeding';
-        if (type === 'Red Light') return 'red-light';
+        if (type === 'Red Light' || type === 'Signal Jump') return 'red-light';
         if (type === 'Processing...') return 'processing';
         return 'other';
     };

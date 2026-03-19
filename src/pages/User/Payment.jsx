@@ -3,10 +3,18 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CreditCard, CheckCircle, ArrowLeft, ShieldCheck } from 'lucide-react';
 import api from '../../utils/api';
-// Replace this QR image with your own UPI QR code
-import qrCodeImage from '../../assets/paymentqr.jpg';
 
 import './Payment.css';
+
+const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+    });
+};
 
 const Payment = () => {
     const { challanId } = useParams();
@@ -35,12 +43,64 @@ const Payment = () => {
     const handleConfirmPayment = async () => {
         setPaying(true);
         try {
-            await api.post('/api/user/pay-challan', { challan_id: challanId });
-            alert("Payment Recorded Successfully!");
-            // Redirect user back to the challan tab (My Challans)
-            navigate('/user/challans');
+            // Load Razorpay Script
+            const res = await loadRazorpayScript();
+            if (!res) {
+                alert('Razorpay SDK failed to load. Are you online?');
+                setPaying(false);
+                return;
+            }
+
+            // Create Order
+            const orderResponse = await api.post('/api/payment/create-order', { challan_id: challanId });
+            const { order_id, amount, key } = orderResponse.data;
+
+            // Razorpay options
+            const options = {
+                key: key, 
+                amount: amount, 
+                currency: "INR",
+                name: "Traffic Sentinel",
+                description: "Challan Payment",
+                order_id: order_id,
+                handler: async function (response) {
+                    try {
+                        await api.post('/api/payment/verify', {
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_signature: response.razorpay_signature,
+                            challan_id: challanId
+                        });
+                        alert("Payment successful!");
+                        navigate('/user/payments');
+                    } catch (verifyError) {
+                        alert(verifyError.response?.data?.error || "Payment verification failed");
+                        setPaying(false);
+                    }
+                },
+                prefill: {
+                    name: "Vehicle Owner",
+                },
+                theme: {
+                    color: "#2563eb"
+                },
+                modal: {
+                    ondismiss: function() {
+                        setPaying(false);
+                    }
+                }
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.on('payment.failed', function (response){
+                alert(response.error.description);
+                setPaying(false);
+            });
+            
+            rzp.open();
+
         } catch (err) {
-            alert(err.response?.data?.error || "Failed to confirm payment");
+            alert(err.response?.data?.error || "Failed to initiate payment");
             setPaying(false);
         }
     };
@@ -78,7 +138,7 @@ const Payment = () => {
                 <div className="payment-header">
                     <ShieldCheck className="w-12 h-12 text-blue-500 mb-2 mx-auto" />
                     <h2>Secure Payment Portal</h2>
-                    <p>Scan the QR code below to settle your fine.</p>
+                    <p>Pay your challan securely using Razorpay gateway.</p>
                 </div>
 
                 <div className="payment-details-group">
@@ -100,20 +160,6 @@ const Payment = () => {
                     </div>
                 </div>
 
-                <div className="qr-container">
-                    {/* The QR Image */}
-                    <img
-                        src={qrCodeImage}
-                        alt="UPI Payment QR Code"
-                        className="payment-qr-image"
-                        onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = "https://via.placeholder.com/300x300.png?text=QR+Code+Missing";
-                        }}
-                    />
-                    <p className="qr-instruction">Scan this QR code with any UPI app to pay</p>
-                </div>
-
                 <div className="payment-actions">
                     <button
                         onClick={handleConfirmPayment}
@@ -124,8 +170,8 @@ const Payment = () => {
                             <div className="spinner-small"></div>
                         ) : (
                             <>
-                                <CheckCircle className="w-5 h-5 mr-2" />
-                                I Have Paid
+                                <CreditCard className="w-5 h-5 mr-2" />
+                                Pay Now
                             </>
                         )}
                     </button>

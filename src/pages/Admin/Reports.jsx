@@ -38,13 +38,18 @@ const Reports = () => {
                 </div>
 
                 <div className="filter-group">
-                    {['all', 'pending', 'accepted', 'declined'].map(f => (
+                    {[
+                        { id: 'all', label: 'All', count: reports.length },
+                        { id: 'pending', label: 'Pending', count: reports.filter(r => r.status === 'pending').length },
+                        { id: 'accepted', label: 'Accepted', count: reports.filter(r => r.status === 'REPORT ACCEPTED' || r.status === 'accepted').length },
+                        { id: 'declined', label: 'Declined', count: reports.filter(r => r.status === 'REPORT REJECTED' || r.status === 'declined' || r.status === 'rejected').length }
+                    ].map(tab => (
                         <button
-                            key={f}
-                            onClick={() => setFilter(f)}
-                            className={`filter-btn ${filter === f ? 'active' : ''}`}
+                            key={tab.id}
+                            onClick={() => setFilter(tab.id)}
+                            className={`filter-btn ${filter === tab.id ? 'active' : ''}`}
                         >
-                            {f}
+                            {tab.label} <span className="tab-count">{tab.count}</span>
                         </button>
                     ))}
                 </div>
@@ -74,9 +79,12 @@ const Reports = () => {
                                     <div className="icon-box">
                                         <AlertTriangle className="icon-md" />
                                     </div>
-                                    <span className={`card-status-badge ${report.status}`}>
-                                        {report.status}
-                                    </span>
+                                    <div className="status-group">
+                                        <span className={`card-status-badge ${report.status}`}>
+                                            {report.status}
+                                        </span>
+                                        <span className="challan-id-badge">{report.display_challan_id}</span>
+                                    </div>
                                 </div>
 
                                 <div className="report-info">
@@ -87,10 +95,10 @@ const Reports = () => {
 
                                     <div className="details-list">
                                         <div className="detail-item">
-                                            <User className="icon-sm text-slate" /> {report.user_name}
+                                            <User className="icon-sm text-slate" /> <b>User:</b> {report.user_name}
                                         </div>
                                         <div className="detail-item">
-                                            <Car className="icon-sm text-slate" /> {report.vehicle_number}
+                                            <Car className="icon-sm text-slate" /> <b>Plate:</b> {report.user_vehicle_number}
                                         </div>
                                     </div>
 

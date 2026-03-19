@@ -117,8 +117,11 @@ const ChallanDetails = () => {
                             {/* Plate Crop */}
                             {challan.plate_crop && (
                                 <div className="plate-crop-container">
-                                    <span className="plate-label">Recognized Plate</span>
-                                    <img src={`http://localhost:5000/${challan.plate_crop}`} className="plate-img" alt="Plate" />
+                                    <div className="plate-info-labels">
+                                        <p className="text-sm font-bold text-slate-300">Violation Type: <span className="text-blue-400">{challan.type}</span></p>
+                                        <p className="text-sm font-bold text-slate-300">Recognized Number Plate: <span className="text-blue-400">{challan.vehicle_number}</span></p>
+                                    </div>
+                                    <img src={`http://localhost:5000/${challan.plate_crop}`} className="plate-img mt-2 rounded border border-slate-200" alt="Plate" />
                                 </div>
                             )}
                         </div>
@@ -138,18 +141,22 @@ const ChallanDetails = () => {
                             <MapPin className="w-5 h-5 icon-blue" /> Location Details
                         </h3>
                         <div className="info-content">
-                            <p className="location-text">{challan.location}</p>
-                            <p className="timestamp-text"><Calendar className="inline w-4 h-4 mr-1" /> {challan.timestamp}</p>
+                            <p className="location-label font-bold text-xs uppercase text-slate-400 mb-1">Violation Location:</p>
+                            <p className="location-text text-lg font-bold text-white leading-tight mb-2">Vidyalankar Institute of Technology Campus</p>
+                            
+                            <p className="timestamp-label font-bold text-xs uppercase text-slate-400 mb-1">Violation Time:</p>
+                            <p className="timestamp-text font-medium text-slate-300"><Calendar className="inline w-4 h-4 mr-1" /> {challan.timestamp}</p>
                         </div>
 
-                        <div className="map-frame">
+                        <div className="map-frame mt-4 rounded-2xl overflow-hidden border border-slate-100 shadow-inner h-[250px]">
                             <iframe
                                 width="100%"
                                 height="100%"
                                 frameBorder="0"
-                                scrolling="no"
-                                src={`https://maps.google.com/maps?q=${encodeURIComponent(challan.location)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
-                                title="Violation Location"
+                                src="https://www.google.com/maps?q=19.021855113881738, 72.87054322441513&z=17&output=embed"
+                                title="Vidyalankar Campus Location"
+                                allowFullScreen=""
+                                loading="lazy"
                             ></iframe>
                         </div>
                     </div>

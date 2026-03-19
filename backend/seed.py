@@ -37,11 +37,11 @@ def create_dummy_data():
         violations = [
             Violation(
                 vehicle_number='MH12AB1234',
-                violation_type='Over Speeding',
+                violation_type='Signal Jump',
                 location='Mumbai-Pune Expressway, KM 42',
                 timestamp=datetime.now() - timedelta(days=2),
                 status='pending',
-                fine_amount=1000.0,
+                fine_amount=500.0,
                 image_path='uploads/sample_violation_1.jpg'
             ),
             Violation(
@@ -88,11 +88,11 @@ def create_dummy_data():
         more_violations = [
             Violation(
                 vehicle_number='MH12AB1234',
-                violation_type='Red Light Jump',
+                violation_type='Signal Jump',
                 location='Mg Road, Sector 4',
                 timestamp=datetime.now() - timedelta(hours=2),
                 status='pending',
-                fine_amount=2000.0,
+                fine_amount=500.0,
                 image_path='https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&q=80', # External image for demo
                 video_path='https://assets.mixkit.co/videos/preview/mixkit-traffic-cars-and-buses-on-a-busy-street-4367-large.mp4' # Mock video
             ),

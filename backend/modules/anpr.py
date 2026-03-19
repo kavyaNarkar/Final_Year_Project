@@ -74,8 +74,8 @@ class ANPRProcessor:
         results = self.reader.readtext(plate_crop)
         for (_, text, _) in results:
             clean_text = re.sub(r'[^A-Z0-9]', '', text.upper())
-            # STRICT Ruleset: MH01AB0001 format ONLY
-            pattern = r'[A-Z]{2}[0-9]{2}[A-Z]{2}[0-9]{4}'
+            # STRICT Ruleset: Support MH01AB0001 or MH48S3803 format
+            pattern = r'[A-Z]{2}[0-9]{1,2}[A-Z]{1,2}[0-9]{4}'
             match = re.search(pattern, clean_text)
             if match:
                 return match.group(0)

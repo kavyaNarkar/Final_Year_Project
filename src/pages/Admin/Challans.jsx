@@ -206,17 +206,36 @@ const Challans = () => {
                         >
                             {/* Evidence View */}
                             <div className="modal-left">
-                                <img
-                                    src={`http://localhost:5000/${selectedChallan.image}`}
-                                    alt="Violation"
-                                    className="modal-image"
-                                />
-                                <div className="violation-tag">
-                                    <div className="pulse-dot"></div> HIGH SPEED VIOLATION
+                                <div className="main-evidence-container">
+                                    <img
+                                        src={`http://localhost:5000/${selectedChallan.image}`}
+                                        alt="Violation"
+                                        className="modal-image"
+                                    />
+                                    <div className="violation-tag uppercase">
+                                        <div className="pulse-dot"></div> {selectedChallan.type}
+                                    </div>
                                 </div>
-                                <div className="plate-crop-inset">
-                                    <p className="plate-inset-label">Cropped Plate</p>
-                                    <img src={`http://localhost:5000/${selectedChallan.plate_crop}`} alt="Plate" className="plate-inset-img" />
+
+                                {selectedChallan.video && (
+                                    <div className="video-evidence-container mt-4">
+                                        <p className="text-xs font-bold text-slate-400 uppercase mb-2">Video Evidence</p>
+                                        <video 
+                                            src={`http://localhost:5000/${selectedChallan.video}`} 
+                                            controls 
+                                            className="w-full rounded-xl border border-slate-700 bg-black h-48"
+                                        />
+                                    </div>
+                                )}
+
+                                <div className="plate-crop-inset mt-4">
+                                    <p className="plate-inset-label">Recognized Number Plate</p>
+                                    <div className="flex items-center gap-4">
+                                        <img src={`http://localhost:5000/${selectedChallan.plate_crop}`} alt="Plate" className="plate-inset-img h-12 object-contain" />
+                                        <span className="text-xl font-bold font-mono text-white bg-slate-800 px-3 py-1 rounded border border-slate-600">
+                                            {selectedChallan.vehicle_number}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
 

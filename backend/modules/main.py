@@ -106,7 +106,7 @@ class MainController:
             
             if challan_id:
                 print(f"[DB] Inserted Challan #{challan_id} successfully.")
-                self.notifier.notify_user(owner_name, violation_type, vehicle_number=detected_plate)
+                self.notifier.notify_user(owner_name, violation_type, vehicle_number=detected_plate, challan_id=challan_id)
         else:
             print("[WARNING] Could not salvage OCR from video clipping.")
 
@@ -200,37 +200,42 @@ class MainController:
                                         cv2.imwrite(early_snap_path, frame)
                                         self.last_early_capture_time = time.time()
                             
-                            is_signal_jump = self.signal_jump_detector.check_violation(vehicles)
                             current_signal_state = self.signal_reader.get_state()
+                            is_signal_jump = self.signal_jump_detector.check_violation(vehicles, current_signal_state)
                             
-                            if is_signal_jump and current_signal_state == "RED":
+                            if is_signal_jump:
                                 is_recording = True
                                 recording_start_time = time.time()
                                 recorded_frames = list(buffered_frames) + [frame]
                                 
+                # ISSUE 2: Overlay signal on stream exactly as requested
+                current_signal_state = self.signal_reader.get_state()
+                
                 # Rendering UI explicitly for Admins observing the node
                 display_frame = frame.copy()
                 
+                # Signal Overlay (ISSUE 2)
+                cv2.putText(
+                    display_frame,
+                    f"Signal: {current_signal_state}",
+                    (20, 50),
+                    cv2.FONT_HERSHEY_SIMPLEX, 
+                    1,
+                    (0, 255, 0),
+                    2
+                )
+                
                 # [VIRTUAL LINE DRAWING (ADMIN VIEW)]
-                # Prominently drawn in bright YELLOW so Admin can visually adjust it
                 lp1 = self.signal_jump_detector.line_p1
                 lp2 = self.signal_jump_detector.line_p2
-                cv2.line(display_frame, lp1, lp2, (0, 255, 255), 3) # Yellow Line
-                cv2.putText(display_frame, "VIRTUAL STOP LINE", 
-                            (lp1[0] + 15, lp1[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+                cv2.line(display_frame, lp1, lp2, (0, 255, 255), 2) # Yellow line
                 
-                # Admin UI Tags
-                current_signal = self.signal_reader.get_state()
-                signal_color = (0, 0, 255) if current_signal == "RED" else ((0, 255, 255) if current_signal == "YELLOW" else (0, 255, 0))
-                cv2.putText(display_frame, f"Current Signal: {current_signal}", 
-                            (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, signal_color, 2)
-                            
-                cv2.putText(display_frame, f"Status: {'RECORDING' if is_recording else 'MONITORING'}", 
-                            (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255) if is_recording else (0,255,0), 2)
-                
-                # FPS calculation
+                # Status & FPS
+                cv2.putText(display_frame, f"REC: {'YES' if is_recording else 'NO'}", 
+                            (20, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255) if is_recording else (255,255,255), 2)
                 cv2.putText(display_frame, f"FPS: {int(fps)}", 
                             (display_frame.shape[1] - 120, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+
                 # Expose frame to memory for endpoints
                 self.display_frame = display_frame.copy()
                 

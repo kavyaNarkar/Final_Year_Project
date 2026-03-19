@@ -77,6 +77,24 @@ const Cameras = () => {
                                     </span>
                                 </div>
 
+                                <div className="camera-preview-container bg-slate-100 rounded-xl mb-4 overflow-hidden relative group">
+                                    {cam.status === 'active' ? (
+                                        <img 
+                                            src={`http://localhost:5000/api/admin/camera/${cam.id}/stream`} 
+                                            alt={`Live Stream Node ${cam.id}`}
+                                            className="w-full h-40 object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-40 flex flex-col items-center justify-center text-slate-400">
+                                            <VideoOff className="w-12 h-12 mb-2" />
+                                            <p className="text-xs font-bold uppercase tracking-widest">Feed Unavailable</p>
+                                        </div>
+                                    )}
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <Maximize2 className="text-white w-8 h-8" />
+                                    </div>
+                                </div>
+
                                 <div className="camera-details">
                                     <div className="detail-row">
                                         <MapPin className="icon-sm" /> {cam.location}
@@ -91,7 +109,7 @@ const Cameras = () => {
                                     onClick={() => navigate(`/admin/camera/${cam.id}/stream`)}
                                     className={`stream-btn ${cam.status}`}
                                 >
-                                    {cam.status === 'active' ? <><Play className="icon-sm" /> Initialize Live Stream</> : <><VideoOff className="icon-sm" /> Node Offline</>}
+                                    {cam.status === 'active' ? <><Play className="icon-sm" /> Full View Mode</> : <><VideoOff className="icon-sm" /> Node Offline</>}
                                 </button>
                             </div>
 

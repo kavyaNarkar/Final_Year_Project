@@ -35,3 +35,7 @@ body {
 .cursor-pointer {
   cursor: pointer;
 }
+
+input, textarea, select {
+  color: black !important;
+}

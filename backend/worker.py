@@ -108,12 +108,19 @@ def process_violations(app):
                             
                     # Update Record
                     violation.vehicle_number = final_plate
-                    # violation.image_path = processed_img_path # Point to processed image? Or keep original? Let's keep original for evidence, maybe store processed separately
-                    # For this scope, let's just update status
                     
                     if matched_vehicle:
-                        violation.violation_type = "Speeding" # Mock classification
-                        violation.fine_amount = 2000.0
+                        # ISSUE 1 & 2: Preserve the specific violation type (e.g. Signal Jump) 
+                        # instead of overwriting it with hardcoded "Speeding"
+                        if violation.violation_type in ["Processing...", "Unidentified", "pending"]:
+                             violation.violation_type = "Traffic Violation" # generic fallback
+                        
+                        # Ensure fine amount aligns with the violation type if not already set
+                        if violation.violation_type == "Signal Jump":
+                            violation.fine_amount = 500.0
+                        else:
+                            violation.fine_amount = 500.0 # Default fine
+                            
                         violation.status = "processed"
                         violation.confidence_score = 0.95
                         print(f"Matched Vehicle: {final_plate}")
@@ -123,6 +130,8 @@ def process_violations(app):
                         violation.fine_amount = 0.0
                         print(f"Could not match vehicle definitively. Read: {final_plate}")
 
+                    # ISSUE 7: Debug Print
+                    print("Final Violation Type:", violation.violation_type)
                     db.session.commit()
                     
                 except Exception as e:

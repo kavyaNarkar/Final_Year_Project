@@ -2,19 +2,74 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { AlertTriangle, CheckCircle, Camera, CreditCard, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-
+import api from '../../utils/api';
 
 import './Dashboard.css';
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
+    const [statsData, setStatsData] = React.useState({
+        total: 0,
+        today: 0,
+        paid: 0,
+        pending_reports: 0,
+        active_cameras: 0,
+        recent_violations: []
+    });
+    const [isLoading, setIsLoading] = React.useState(true);
+    const [error, setError] = React.useState(null);
+
+    React.useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const response = await api.get('/api/admin/statistics');
+                setStatsData(response.data);
+                setError(null);
+            } catch (error) {
+                console.error('Error fetching admin stats:', error);
+                setError("Unable to load dashboard data. Please check server connection.");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchStats();
+        const interval = setInterval(fetchStats, 30000); // Refresh every 30s
+        return () => clearInterval(interval);
+    }, []);
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh]">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mb-4"></div>
+                <p className="text-slate-500 font-medium">Loading Dashboard Data...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
+                <div className="bg-red-50 text-red-600 p-4 rounded-2xl border border-red-100 max-w-md">
+                    <AlertTriangle className="w-12 h-12 mx-auto mb-3" />
+                    <h2 className="text-xl font-bold mb-2">Connection Error</h2>
+                    <p>{error}</p>
+                    <button 
+                        onClick={() => window.location.reload()} 
+                        className="mt-4 px-6 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors"
+                    >
+                        Try Again
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     const stats = [
-        { title: 'Total Violations', value: '1,240', subtext: 'Since system start', icon: AlertTriangle, color: 'blue', trend: 12 },
-        { title: 'Today\'s Violations', value: '45', subtext: 'Updated 2 mins ago', icon: AlertTriangle, color: 'orange', trend: 5 },
-        { title: 'Paid Challans', value: '850', subtext: '₹ 4.2L Collected', icon: CheckCircle, color: 'emerald', trend: 8 },
-        { title: 'Pending Reports', value: '12', subtext: 'Action Required', icon: AlertTriangle, color: 'red', trend: 2 },
+        { title: 'Total Violations', value: statsData.total.toLocaleString(), subtext: 'Since system start', icon: AlertTriangle, color: 'blue', trend: 12 },
+        { title: 'Today\'s Violations', value: statsData.today.toLocaleString(), subtext: 'Updated 2 mins ago', icon: AlertTriangle, color: 'orange', trend: 5 },
+        { title: 'Paid Challans', value: statsData.paid.toLocaleString(), subtext: 'Total Collection', icon: CheckCircle, color: 'emerald', trend: 8 },
+        { title: 'Pending Reports', value: statsData.pending_reports.toLocaleString(), subtext: 'Action Required', icon: AlertTriangle, color: 'red', trend: 2 },
     ];
 
     return (
@@ -72,7 +127,7 @@ const AdminDashboard = () => {
                 >
                     <div className="panel-header">
                         <h2 className="panel-title">Recent Violations</h2>
-                        <button onClick={() => navigate('/admin/violations')} className="view-all-link">View All</button>
+                        <button onClick={() => navigate('/admin/challans')} className="view-all-link">View All</button>
                     </div>
 
                     <div className="table-container">
@@ -87,19 +142,25 @@ const AdminDashboard = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {[1, 2, 3, 4, 5].map((i) => (
-                                    <tr key={i}>
-                                        <td className="text-white font-medium">#V-{1000 + i}</td>
-                                        <td className="uppercase">MH 12 AB {1230 + i}</td>
-                                        <td><span className="violation-badge">Speeding</span></td>
-                                        <td>10:4{i} AM</td>
-                                        <td>
-                                            <span className={`status-badge-sm ${i % 2 === 0 ? 'pending' : 'processed'}`}>
-                                                {i % 2 === 0 ? 'Pending' : 'Processed'}
-                                            </span>
-                                        </td>
+                                {statsData.recent_violations.length > 0 ? (
+                                    statsData.recent_violations.map((violation) => (
+                                        <tr key={violation.id}>
+                                            <td className="text-white font-medium">{violation.display_id}</td>
+                                            <td className="uppercase">{violation.vehicle_number}</td>
+                                            <td><span className="violation-badge">{violation.type}</span></td>
+                                            <td>{violation.timestamp}</td>
+                                            <td>
+                                                <span className={`status-badge-sm ${violation.status === 'pending' ? 'pending' : 'processed'}`}>
+                                                    {violation.status.charAt(0).toUpperCase() + violation.status.slice(1)}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="5" className="text-center py-4 text-slate-400">No violations detected</td>
                                     </tr>
-                                ))}
+                                )}
                             </tbody>
                         </table>
                     </div>

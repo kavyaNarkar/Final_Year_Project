@@ -1,40 +1,49 @@
 import smtplib
 import os
 from email.message import EmailMessage
+from dotenv import load_dotenv
 
-# For testing you can use a Dummy configuration or real ones when provided.
-SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
-SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
-SMTP_USERNAME = os.environ.get("SMTP_USERNAME", "dummy_echallan@gmail.com")
-SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "dummy_password")
+# Load environment variables
+load_dotenv()
 
 def _send_email_base(to_email, subject, body):
     """
-    Base function to handle SMPT connections.
+    Base function to handle SMTP connections.
+    Fetches latest env vars inside the function to ensure compatibility with load_dotenv().
     """
+    server_addr = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
+    server_port = int(os.environ.get("SMTP_PORT", 587))
+    server_user = os.environ.get("SMTP_USERNAME", "dummy_echallan@gmail.com")
+    server_pass = os.environ.get("SMTP_PASSWORD", "dummy_password")
+    use_real_smtp = os.environ.get("USE_REAL_SMTP", "false").lower() == "true"
+    
     try:
         msg = EmailMessage()
         msg.set_content(body)
         msg['Subject'] = subject
-        msg['From'] = SMTP_USERNAME
+        msg['From'] = server_user
         msg['To'] = to_email
         
-        # NOTE: For assignments/development, we just print the email to console
-        # In production with valid creds, uncomment the server lines
-        # server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-        # server.starttls()
-        # server.login(SMTP_USERNAME, SMTP_PASSWORD)
-        # server.send_message(msg)
-        # server.quit()
+        if use_real_smtp and server_user and "dummy" not in server_user:
+            print(f"[EMAIL] Attempting real SMTP send to {to_email} via {server_addr}...")
+            server = smtplib.SMTP(server_addr, server_port)
+            server.starttls()
+            server.login(server_user, server_pass)
+            server.send_message(msg)
+            server.quit()
+            print(f"[EMAIL] Successfully sent email to {to_email}")
+        else:
+            # Development/Testing fallback
+            print("\n" + "="*50)
+            print(f"--- [MOCK EMAIL] to {to_email} ---")
+            print(f"Subject: {subject}")
+            print(f"Body snippet:\n{body[:100]}...")
+            print("="*50 + "\n")
+            print("[HINT] Set USE_REAL_SMTP=true and valid SMTP_* env vars to send real emails.")
         
-        print("\n" + "="*50)
-        print(f"--- EMAIL SENT to {to_email} ---")
-        print(f"Subject: {subject}")
-        print(f"Body:\n{body}")
-        print("="*50 + "\n")
         return True
     except Exception as e:
-        print(f"[ERROR] Failed to send email to {to_email}: {e}")
+        print(f"[ERROR] Email system failure: {e}")
         return False
 
 def send_otp_email(to_email, otp_code):

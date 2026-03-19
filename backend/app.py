@@ -11,15 +11,27 @@ from flask import Flask, request, jsonify, session, Response
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
-from models import db, User, Admin, Vehicle, Violation, Camera, Payment, SupportTicket, Report, OTPStore, bcrypt
+from flask_socketio import SocketIO, emit
+from models import db, User, Admin, Vehicle, Violation, Camera, Payment, SupportTicket, Report, OTPStore, ActionLog, bcrypt
 import uuid
 from datetime import datetime, timedelta
 import random
 import requests
 from dotenv import load_dotenv
+import razorpay
 
-# Load environment variables
-load_dotenv()
+# Load environment variables (force override to pick up changes without full restart)
+load_dotenv(override=True)
+
+# Initialize Razorpay Client
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
+RAZORPAY_SECRET_KEY = os.getenv("RAZORPAY_SECRET_KEY")
+
+if RAZORPAY_KEY_ID and RAZORPAY_SECRET_KEY:
+    razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_SECRET_KEY))
+else:
+    razorpay_client = None
+    print("[WARNING] Razorpay keys not found in .env. Payment gateway will not work.")
 
 # Initialize
 app = Flask(__name__)
@@ -35,6 +47,7 @@ if not os.path.exists(app.config['UPLOAD_FOLDER']):
 CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": "*"}}, allow_headers=["Content-Type", "Authorization", "X-User-Id"])
 db.init_app(app)
 bcrypt.init_app(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Create Database tables
 with app.app_context():
@@ -69,6 +82,14 @@ vision_thread.start()
 def home():
     return jsonify({"message": "eChallan API is running", "status": "active"})
 
+@app.route('/api/signal-status', methods=['GET'])
+def get_signal_status():
+    # Fetch the state from the active ANPR controller's signal reader
+    current_state = "GREEN" # default fallback
+    if hasattr(anpr_controller, 'signal_reader'):
+        current_state = anpr_controller.signal_reader.get_state()
+    return jsonify({"signal": current_state})
+
 # --- AUTHENTICATION ---
 
 @app.route('/api/auth/register-user', methods=['POST'])
@@ -97,7 +118,22 @@ def register_user():
     otp = str(random.randint(100000, 999999))
     expires_at = datetime.utcnow() + timedelta(minutes=5)
     
-    if user:
+    # Check if vehicle number already registered
+    existing_vehicle_user = User.query.filter_by(vehicle_number=data['vehicleNumber'].upper()).first()
+    if existing_vehicle_user:
+        if existing_vehicle_user.email_verified:
+            return jsonify({"error": "Vehicle already registered."}), 409
+        else:
+            # Overwrite if unverified
+            user = existing_vehicle_user
+            user.email = email
+            user.otp_code = otp
+            user.otp_expiry_time = expires_at
+            user.first_name = data['firstName']
+            user.last_name = data['lastName']
+            user.password = hashed_password
+            user.phone_number = data['phoneNumber']
+    elif user:
         if user.email_verified:
             return jsonify({"error": "Email already registered"}), 409
         else:
@@ -394,9 +430,10 @@ def get_user_challans():
     for c in challans:
         result.append({
             "id": c.id,
+            "display_id": f"#V-{1000 + c.id}",
             "vehicle_number": c.vehicle_number,
             "type": c.violation_type,
-            "timestamp": c.timestamp.strftime("%Y-%m-%d %H:%M"),
+            "timestamp": c.timestamp.strftime("%d %B %Y – %H:%M:%S"),
             "amount": c.fine_amount,
             "status": c.status,
             "location": c.location,
@@ -406,6 +443,34 @@ def get_user_challans():
             "report_status": Report.query.filter_by(challan_id=c.id).first().status if Report.query.filter_by(challan_id=c.id).first() else None
         })
     return jsonify(result), 200
+
+@app.route('/api/user/statistics', methods=['GET'])
+def get_user_statistics():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    total_violations = Violation.query.filter_by(vehicle_number=user.vehicle_number).count()
+    active_challans = Violation.query.filter_by(vehicle_number=user.vehicle_number, status='pending').count()
+    paid_challans = Violation.query.filter_by(vehicle_number=user.vehicle_number, status='paid').count()
+    
+    recent_activity = []
+    violations = Violation.query.filter_by(vehicle_number=user.vehicle_number).order_by(Violation.timestamp.desc()).limit(5).all()
+    for v in violations:
+        recent_activity.append({
+            "id": v.id,
+            "type": v.violation_type,
+            "timestamp": v.timestamp.strftime("%d %B %Y – %H:%M:%S"),
+            "amount": v.fine_amount,
+            "status": v.status
+        })
+        
+    return jsonify({
+        "total": total_violations,
+        "active": active_challans,
+        "paid": paid_challans,
+        "recent_activity": recent_activity
+    }), 200
 
 @app.route('/api/user/challan/<int:id>', methods=['GET'])
 def get_user_challan_detail(id):
@@ -422,9 +487,10 @@ def get_user_challan_detail(id):
          
     return jsonify({
         "id": c.id,
+        "display_id": f"#V-{1000 + c.id}",
         "vehicle_number": c.vehicle_number,
         "type": c.violation_type,
-        "timestamp": c.timestamp.strftime("%Y-%m-%d %H:%M"),
+        "timestamp": c.timestamp.strftime("%d %B %Y – %H:%M:%S"),
         "amount": c.fine_amount,
         "status": c.status,
         "location": c.location,
@@ -433,8 +499,9 @@ def get_user_challan_detail(id):
         "plate_crop": c.cropped_plate_path,
         "report_status": Report.query.filter_by(challan_id=c.id).first().status if Report.query.filter_by(challan_id=c.id).first() else None,
         "is_reported": True if Report.query.filter_by(challan_id=c.id).first() else False,
-        "lat": 18.5204, # Mock coordinates for map (Pune)
-        "lng": 73.8567
+        "payment_date": c.payment_date.strftime("%d %B %Y – %H:%M:%S") if c.payment_date else None,
+        "lat": 19.0760,
+        "lng": 72.8777
     }), 200
 
 @app.route('/api/user/payments', methods=['GET'])
@@ -446,10 +513,13 @@ def get_user_payments():
     payments = Payment.query.filter_by(user_id=user.id).order_by(Payment.payment_date.desc()).all()
     result = []
     for p in payments:
+        violation = Violation.query.get(p.violation_id)
         result.append({
             "id": p.id,
             "challan_id": p.violation_id,
-            "date": p.payment_date.strftime("%Y-%m-%d %H:%M"),
+            "display_challan_id": f"#V-{1000 + p.violation_id}",
+            "violation_type": violation.violation_type if violation else "Unknown",
+            "date": p.payment_date.strftime("%d %B %Y – %H:%M:%S"),
             "amount": p.amount,
             "status": p.status,
             "transaction_ref": p.transaction_ref
@@ -518,8 +588,8 @@ def user_support():
             db.session.rollback()
             return jsonify({"error": str(e)}), 500
 
-@app.route('/api/user/pay-challan', methods=['POST'])
-def pay_challan():
+@app.route('/api/payment/create-order', methods=['POST'])
+def create_payment_order():
     user = get_current_user()
     if not user:
         return jsonify({"error": "Unauthorized"}), 401
@@ -533,24 +603,74 @@ def pay_challan():
     
     if challan.status == 'paid':
         return jsonify({"error": "Challan already paid"}), 400
-    
-    # Simulate payment
-    challan.status = 'paid'
-    challan.payment_status = 'PAID'
-    challan.payment_date = datetime.utcnow()
-    challan.transaction_id = f"TRX-{uuid.uuid4().hex[:8].upper()}"
-    
-    new_payment = Payment(
-        user_id=user.id,
-        violation_id=challan.id,
-        amount=challan.fine_amount,
-        transaction_ref=challan.transaction_id
-    )
+        
+    if not razorpay_client:
+        return jsonify({"error": "Payment gateway not configured"}), 500
+        
+    # Amount is in paise
+    amount = int(challan.fine_amount * 100)
     
     try:
+        order = razorpay_client.order.create({
+            "amount": amount,
+            "currency": "INR",
+            "receipt": f"receipt_v_{challan.id}",
+            "payment_capture": 1 # Auto capture
+        })
+        return jsonify({
+            "order_id": order['id'],
+            "amount": order['amount'],
+            "key": RAZORPAY_KEY_ID
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/payment/verify', methods=['POST'])
+def verify_payment():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    data = request.json
+    payment_id = data.get('razorpay_payment_id')
+    order_id = data.get('razorpay_order_id')
+    signature = data.get('razorpay_signature')
+    challan_id = data.get('challan_id')
+    
+    if not razorpay_client:
+        return jsonify({"error": "Payment gateway not configured"}), 500
+        
+    try:
+        # Verify the signature
+        razorpay_client.utility.verify_payment_signature({
+            'razorpay_order_id': order_id,
+            'razorpay_payment_id': payment_id,
+            'razorpay_signature': signature
+        })
+        
+        # Payment is authentic
+        challan = Violation.query.get(challan_id)
+        if not challan:
+            return jsonify({"error": "Challan not found"}), 404
+            
+        challan.status = 'paid'
+        challan.payment_status = 'PAID'
+        challan.payment_date = datetime.utcnow()
+        challan.transaction_id = payment_id
+        
+        new_payment = Payment(
+            user_id=user.id,
+            violation_id=challan.id,
+            amount=challan.fine_amount,
+            transaction_ref=payment_id
+        )
+        
         db.session.add(new_payment)
         db.session.commit()
-        return jsonify({"message": "Payment successful", "transaction_ref": challan.transaction_id}), 200
+        return jsonify({"message": "Payment successful"}), 200
+        
+    except razorpay.errors.SignatureVerificationError:
+        return jsonify({"error": "Payment verification failed"}), 400
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
@@ -604,12 +724,13 @@ def admin_get_challans():
         vehicle = Vehicle.query.get(v.vehicle_number) if v.vehicle_number else None
         result.append({
             "id": v.id,
+            "display_id": f"#V-{1000 + v.id}",
             "vehicle_number": v.vehicle_number or "Scanning...",
             "owner_name": vehicle.owner_name if vehicle else "Unknown",
             "type": v.violation_type,
             "amount": v.fine_amount,
             "status": v.status,
-            "timestamp": v.timestamp.strftime("%Y-%m-%d %H:%M"),
+            "timestamp": v.timestamp.strftime("%d %B %Y – %H:%M:%S"),
             "is_reported": True if Report.query.filter_by(challan_id=v.id).first() else False
         })
     return jsonify(result), 200
@@ -627,18 +748,21 @@ def admin_get_challan_detail(id):
     
     return jsonify({
         "id": v.id,
+        "display_id": f"#V-{1000 + v.id}",
         "vehicle_number": v.vehicle_number,
         "owner_name": vehicle.owner_name if vehicle else "Unknown",
         "type": v.violation_type,
         "amount": v.fine_amount,
         "status": v.status,
-        "timestamp": v.timestamp.strftime("%Y-%m-%d %H:%M"),
+        "timestamp": v.timestamp.strftime("%d %B %Y – %H:%M:%S"),
         "location": v.location,
         "image": v.image_path,
         "video": v.video_path,
         "plate_crop": v.cropped_plate_path,
-        "payment_date": v.payment_date.strftime("%Y-%m-%d %H:%M") if v.payment_date else None,
-        "transaction_id": v.transaction_id
+        "payment_date": v.payment_date.strftime("%d %B %Y – %H:%M:%S") if v.payment_date else None,
+        "transaction_id": v.transaction_id,
+        "lat": 19.0222,
+        "lng": 72.8715
     }), 200
 
 @app.route('/api/admin/statistics', methods=['GET'])
@@ -651,8 +775,22 @@ def get_admin_stats():
     today_violations = Violation.query.filter(Violation.timestamp >= today_start).count()
     paid_challans = Violation.query.filter_by(status='paid').count()
     unpaid_challans = Violation.query.filter_by(status='pending').count()
+    pending_reports = Report.query.filter_by(status='pending').count()
     active_cameras = Camera.query.filter_by(status='active').count()
     
+    # Recent violations for dashboard
+    recent_violations = Violation.query.order_by(Violation.timestamp.desc()).limit(5).all()
+    recent_list = []
+    for rv in recent_violations:
+        recent_list.append({
+            "id": rv.id,
+            "display_id": f"#V-{1000 + rv.id}",
+            "vehicle_number": rv.vehicle_number,
+            "type": rv.violation_type,
+            "timestamp": rv.timestamp.strftime("%d %B %Y – %H:%M:%S"),
+            "status": rv.status
+        })
+
     # Simple chart data: Violations in last 7 days
     from sqlalchemy import func
     from datetime import timedelta
@@ -664,13 +802,29 @@ def get_admin_stats():
         
     vehicle_types = db.session.query(Vehicle.vehicle_type, func.count(Violation.id)).join(Violation, Violation.vehicle_number == Vehicle.vehicle_number).group_by(Vehicle.vehicle_type).all()
     type_stats = [{"type": t, "count": c} for t, c in vehicle_types]
+    
+    if not chart_data or total_violations == 0:
+        return jsonify({
+            "total": total_violations,
+            "today": today_violations,
+            "paid": paid_challans,
+            "unpaid": unpaid_challans,
+            "pending_reports": pending_reports,
+            "active_cameras": active_cameras,
+            "recent_violations": recent_list,
+            "daily_violations": [],
+            "vehicle_type_stats": [],
+            "message": "No sufficient data available for statistics."
+        }), 200
 
     return jsonify({
         "total": total_violations,
         "today": today_violations,
         "paid": paid_challans,
         "unpaid": unpaid_challans,
+        "pending_reports": pending_reports,
         "active_cameras": active_cameras,
+        "recent_violations": recent_list,
         "daily_violations": chart_data,
         "vehicle_type_stats": type_stats
     }), 200
@@ -740,18 +894,24 @@ def admin_get_reports():
     for r in reports:
         challan = Violation.query.get(r.challan_id)
         user = User.query.get(r.user_id)
-        vehicle = Vehicle.query.get(user.vehicle_number) if user else None
+        # vehicle = Vehicle.query.get(user.vehicle_number) if user else None
         
         result.append({
             "id": r.id,
             "challan_id": r.challan_id,
+            "display_challan_id": f"#V-{1000 + r.challan_id}" if r.challan_id else "Unknown",
             "user_name": f"{user.first_name} {user.last_name}" if user else "Unknown",
-            "vehicle_number": user.vehicle_number if user else "Unknown",
+            "user_vehicle_number": user.vehicle_number if user else "Unknown",
+            "challan_vehicle_number": challan.vehicle_number if challan else "Unknown",
+            "owner_name": Vehicle.query.get(challan.vehicle_number).owner_name if challan and Vehicle.query.get(challan.vehicle_number) else "Unknown",
             "violation_type": challan.violation_type if challan else "Unknown",
             "description": r.description,
             "status": r.status,
             "created_at": r.created_at.strftime("%Y-%m-%d"),
-            "admin_response": r.admin_response
+            "admin_response": r.admin_response,
+            "images": [challan.image_path] if challan else [],
+            "plate_crop": challan.cropped_plate_path if challan else None,
+            "video": challan.video_path if challan else None
         })
     return jsonify(result), 200
 
@@ -765,20 +925,49 @@ def admin_update_report(id):
         return jsonify({"error": "Report not found"}), 404
     
     data = request.json
-    status = data.get('status') # accepted, declined
+    status = data.get('status') # accepted, declined/rejected
     response = data.get('response')
     
-    if status:
-        report.status = status
+    if status == 'accepted':
+        report.status = 'REPORT ACCEPTED'
+        # Cancel and Delete Challan as requested
+        challan = Violation.query.get(report.challan_id)
+        if challan:
+            # Save log before deletion
+            log = ActionLog(
+                action="ACCEPT_REPORT_CANCEL_CHALLAN",
+                target_type="CHALLAN",
+                target_id=str(challan.id),
+                details=f"Report accepted for challan {challan.id}. Vehicle: {challan.vehicle_number}. Reason: {report.description}"
+            )
+            db.session.add(log)
+            
+            # Delete associated records
+            Payment.query.filter_by(violation_id=challan.id).delete()
+            # We keep the report but mark it as accepted. 
+            
+            db.session.delete(challan)
+            
+    elif status == 'declined' or status == 'rejected':
+        report.status = 'REPORT REJECTED'
+        log = ActionLog(
+            action="REJECT_REPORT",
+            target_type="REPORT",
+            target_id=str(report.id),
+            details=f"Report rejected for challan {report.challan_id}."
+        )
+        db.session.add(log)
+        
     if response:
         report.admin_response = response
         
     try:
         db.session.commit()
-        return jsonify({"message": "Report updated successfully"}), 200
+        return jsonify({"message": f"Report {status} successfully"}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
 
 @app.route('/api/admin/challan/<int:id>', methods=['DELETE'])
 def admin_delete_challan(id):
@@ -802,4 +991,4 @@ def admin_delete_challan(id):
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    socketio.run(app, debug=False, port=5000)

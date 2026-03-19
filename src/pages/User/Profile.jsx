@@ -186,7 +186,7 @@ const Profile = () => {
                             </div>
                         </div>
 
-                        {isEditing && (
+                        {isEditing ? (
                             <div className="flex gap-4 pt-4">
                                 <button
                                     type="submit"
@@ -201,6 +201,16 @@ const Profile = () => {
                                     className="px-6 py-3 bg-white border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-colors"
                                 >
                                     Cancel
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="pt-8 border-t border-slate-100">
+                                <button
+                                    type="button"
+                                    onClick={() => { logout(); navigate('/login'); }}
+                                    className="w-full py-3 bg-white border border-red-200 text-red-600 font-bold rounded-xl hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <LogOut className="w-5 h-5" /> Logout from Account
                                 </button>
                             </div>
                         )}

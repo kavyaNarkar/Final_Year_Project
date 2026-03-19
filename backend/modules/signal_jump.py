@@ -23,61 +23,66 @@ class SignalJumpDetector:
     def set_signal_state(self, state):
         self.signal_state = state.upper()
 
-    def check_violation(self, vehicles):
+    def check_violation(self, vehicles, current_signal_state):
         """
-        Logic: Any detected vehicle whose FRONT point crosses the virtual line triggers violation.
-        Uses tracking to ensure NO camera shake triggers violation.
-        A vehicle MUST geometrically travel from above the line to below the line (forward direction).
+        ISSUE 3 & 4: Logic to trigger violation only if Vehicle front crosses while Signal is RED.
+        ISSUE 5: Includes required debug prints.
         """
         current_tracked = {}
         violation_detected = False
-            
+        vehicle_detected = len(vehicles) > 0
+
         for (x, y, w, h) in vehicles:
             cx = x + w // 2
             cy = y + h // 2
             
-            # Use the front-most point of the vehicle bounding box (bottom center for typical camera angles)
+            # ISSUE 4: Even a small portion (front edge) triggers violation.
+            # Using bottom center of bounding box as the 'front' reference in top-down view.
             front_x = cx
             front_y = y + h
             
-            # Find closest existing vehicle to track movement
+            # Tracking logic to avoid double-penalizing the same car
             matched_id = None
-            min_dist = 100 # Maximum travel distance (pixels) allowable per-frame 
-            
+            min_dist = 100
             for vid, data in self.tracked_vehicles.items():
-                prev_cx, prev_cy, prev_front_x, prev_front_y = data
+                prev_cx, prev_cy, prev_fx, prev_fy, has_violated = data
                 dist = math.hypot(cx - prev_cx, cy - prev_cy)
-                
                 if dist < min_dist:
                     matched_id = vid
                     min_dist = dist
                     
             if matched_id is not None:
-                # Ongoing Tracking Math
-                prev_cx, prev_cy, prev_front_x, prev_front_y = self.tracked_vehicles[matched_id]
-                current_tracked[matched_id] = (cx, cy, front_x, front_y)
-                
-                # Check which side of the line the vehicle was and is currently
-                prev_side = get_line_side(prev_front_x, prev_front_y, self.line_p1, self.line_p2)
+                data = self.tracked_vehicles[matched_id]
+                has_violated = data[4]
                 curr_side = get_line_side(front_x, front_y, self.line_p1, self.line_p2)
-                
-                # [VIOLATION LOGIC STRICT RULE]
-                # ONLY if previous known position was ABOVE line (prev_side < 0)
-                # and current is on or BELOW line (curr_side >= 0).
-                # This ensures we only capture vehicles moving forward.
-                if prev_side < 0 and curr_side >= 0:
-                    # STRICT RULE: Must be moving down/forward physically to avoid shake triggers
-                    if front_y > prev_front_y + 2:
-                        print(f"[ALERT] Tracked Vehicle #{matched_id} physically crossed virtual line! Violation Triggered.")
+                crossed = (curr_side >= 0)
+
+                # ISSUE 5: Debug Prints
+                print("Vehicle detected:", vehicle_detected)
+                print("Line crossed:", crossed)
+                print("Signal:", current_signal_state)
+
+                # STRICT CONDITIONS: Detect + Crossed + RED
+                if crossed and current_signal_state == "RED":
+                    if not has_violated:
+                        print(f"[VIOLATION] Vehicle #{matched_id} jumped RED signal!")
                         violation_detected = True
+                        has_violated = True
                     
-                self.tracked_vehicles.pop(matched_id, None) # Claim to prevent double assignment
+                current_tracked[matched_id] = (cx, cy, front_x, front_y, has_violated)
+                self.tracked_vehicles.pop(matched_id, None)
             else:
-                # Register newly spotted vehicle above the line into memory tracking
-                current_tracked[self.next_vehicle_id] = (cx, cy, front_x, front_y)
-                self.next_vehicle_id += 1
-                if self.next_vehicle_id > 10000: self.next_vehicle_id = 0 # reset overflow
+                curr_side = get_line_side(front_x, front_y, self.line_p1, self.line_p2)
+                crossed = (curr_side >= 0)
+                has_violated = False
+
+                # Check for new vehicle appearing already past the line
+                if crossed and current_signal_state == "RED":
+                    violation_detected = True
+                    has_violated = True
                 
-        # Reassign memory to only what is currently visible on screen
+                current_tracked[self.next_vehicle_id] = (cx, cy, front_x, front_y, has_violated)
+                self.next_vehicle_id = (self.next_vehicle_id + 1) % 10000
+                
         self.tracked_vehicles = current_tracked
         return violation_detected

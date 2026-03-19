@@ -19,10 +19,10 @@ const DashboardLayout = ({ children, role }) => {
     const adminLinks = [
         { name: 'Overview', path: '/admin/dashboard', icon: LayoutDashboard },
         { name: 'Cameras', path: '/admin/cameras', icon: Camera },
-        { name: 'Violations', path: '/admin/violations', icon: AlertTriangle },
         { name: 'Challans', path: '/admin/challans', icon: FileText },
         { name: 'Reports', path: '/admin/reports', icon: FileText },
         { name: 'Statistics', path: '/admin/stats', icon: BarChart2 },
+        { name: 'Profile', path: '/admin/profile', icon: User },
     ];
 
     const userLinks = [

@@ -36,7 +36,7 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(60), nullable=False)
     phone_number = db.Column(db.String(15), nullable=False)
-    vehicle_number = db.Column(db.String(20), db.ForeignKey('vehicle.vehicle_number'), nullable=False)
+    vehicle_number = db.Column(db.String(20), db.ForeignKey('vehicle.vehicle_number'), nullable=False, unique=True)
     role = db.Column(db.String(10), default='user')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     email_verified = db.Column(db.Boolean, default=False)
@@ -123,3 +123,19 @@ class OTPStore(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     expires_at = db.Column(db.DateTime, nullable=False)
 
+class ActionLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey('admin.id'), nullable=True)
+    action = db.Column(db.String(100), nullable=False)
+    target_type = db.Column(db.String(50), nullable=True)
+    target_id = db.Column(db.String(100), nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    details = db.Column(db.Text, nullable=True)
+
+# Helper to create app for migrations/initialization
+def create_app_minimal():
+    app = Flask(__name__)
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///echallan.db'
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    db.init_app(app)
+    return app

@@ -23,11 +23,24 @@ const Statistics = () => {
         fetchStats();
     }, []);
 
-    if (loading || !stats) return (
+    if (loading) return (
         <div className="loading-screen">
             <div className="loading-content">
                 <div className="loading-spinner"></div>
                 <p className="loading-text">Aggregating system data...</p>
+            </div>
+        </div>
+    );
+
+    if (!stats || stats.total === 0) return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8">
+            <div className="bg-slate-800/50 p-10 rounded-3xl border border-slate-700 max-w-lg">
+                <BarChart2 className="w-16 h-16 text-slate-500 mx-auto mb-4" />
+                <h2 className="text-2xl font-bold text-white mb-2">Insufficient Data</h2>
+                <p className="text-slate-400">No sufficient data available for statistics at the moment. Please wait for the system to process more violations.</p>
+                <button onClick={() => window.location.reload()} className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-semibold">
+                    Refresh Page
+                </button>
             </div>
         </div>
     );
