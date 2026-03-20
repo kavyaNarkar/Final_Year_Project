@@ -7,7 +7,7 @@ os.environ["OPENCV_VIDEOIO_PRIORITY_MSMF"] = "0" # Fixes slow camera start on wi
 import cv2
 cv2.ocl.setUseOpenCL(False)
 
-from flask import Flask, request, jsonify, session, Response
+from flask import Flask, request, jsonify, session, Response, send_from_directory
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
@@ -54,6 +54,10 @@ with app.app_context():
     if not os.path.exists('instance'):
         os.makedirs('instance')
     db.create_all()
+
+@app.route('/uploads/<path:filename>')
+def serve_uploads(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 # ============================
 # START BACKGROUND ANPR CONTROLLER
@@ -384,8 +388,9 @@ def upload_violation():
         return jsonify({"error": "No selected file"}), 400
 
     # Process save
+    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'car_images'), exist_ok=True)
     filename = f"{uuid.uuid4()}_{file.filename}"
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], 'car_images', filename)
     file.save(filepath)
 
     # Create Initial Record
@@ -393,7 +398,7 @@ def upload_violation():
         image_path=filepath,
         location="Camera 1 - Main Road", # Mock location for now
         violation_type="Processing...",
-        status="pending"
+        status="UNPAID"
     )
     
     db.session.add(new_violation)
@@ -451,8 +456,8 @@ def get_user_statistics():
         return jsonify({"error": "Unauthorized"}), 401
     
     total_violations = Violation.query.filter_by(vehicle_number=user.vehicle_number).count()
-    active_challans = Violation.query.filter_by(vehicle_number=user.vehicle_number, status='pending').count()
-    paid_challans = Violation.query.filter_by(vehicle_number=user.vehicle_number, status='paid').count()
+    active_challans = Violation.query.filter_by(vehicle_number=user.vehicle_number, status='UNPAID').count()
+    paid_challans = Violation.query.filter_by(vehicle_number=user.vehicle_number, status='PAID').count()
     
     recent_activity = []
     violations = Violation.query.filter_by(vehicle_number=user.vehicle_number).order_by(Violation.timestamp.desc()).limit(5).all()
@@ -601,7 +606,7 @@ def create_payment_order():
     if not challan or challan.vehicle_number != user.vehicle_number:
         return jsonify({"error": "Challan not found"}), 404
     
-    if challan.status == 'paid':
+    if challan.status == 'PAID':
         return jsonify({"error": "Challan already paid"}), 400
         
     if not razorpay_client:
@@ -653,7 +658,7 @@ def verify_payment():
         if not challan:
             return jsonify({"error": "Challan not found"}), 404
             
-        challan.status = 'paid'
+        challan.status = 'PAID'
         challan.payment_status = 'PAID'
         challan.payment_date = datetime.utcnow()
         challan.transaction_id = payment_id
@@ -773,8 +778,8 @@ def get_admin_stats():
     total_violations = Violation.query.count()
     today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     today_violations = Violation.query.filter(Violation.timestamp >= today_start).count()
-    paid_challans = Violation.query.filter_by(status='paid').count()
-    unpaid_challans = Violation.query.filter_by(status='pending').count()
+    paid_challans = Violation.query.filter_by(status='PAID').count()
+    unpaid_challans = Violation.query.filter_by(status='UNPAID').count()
     pending_reports = Report.query.filter_by(status='pending').count()
     active_cameras = Camera.query.filter_by(status='active').count()
     

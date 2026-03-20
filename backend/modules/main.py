@@ -72,13 +72,14 @@ class MainController:
         Event-Triggered processing function detached to a Daemon thread.
         Never breaks continuous Stream flow.
         """
-        # Ensure uploads/violations exists
-        os.makedirs("uploads/violations", exist_ok=True)
+        # Ensure uploads directories exist
+        os.makedirs("uploads/car_images", exist_ok=True)
+        os.makedirs("uploads/plate_images", exist_ok=True)
         
         session_id = str(uuid.uuid4())[:8]
-        video_path = f"uploads/violations/{session_id}.mp4"
-        best_frame_path = f"uploads/violations/{session_id}_vehicle.jpg"
-        plate_path = f"uploads/violations/{session_id}_plate.jpg"
+        video_path = f"uploads/car_images/{session_id}.mp4"
+        best_frame_path = f"uploads/car_images/{session_id}_vehicle.jpg"
+        plate_path = f"uploads/plate_images/{session_id}_plate.jpg"
         
         # Write Video (Evidence) explicitly
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -93,6 +94,9 @@ class MainController:
         if best_frame is not None:
             cv2.imwrite(best_frame_path, best_frame)
             cv2.imwrite(plate_path, plate_crop)
+            
+            # Log violation details
+            print(f"DEBUG: Violation Detected - Type: {violation_type}, Detected Plate: {detected_plate}, Video: {video_path}, Best Frame: {best_frame_path}, Plate Image: {plate_path}")
             
             # DB Storage integration
             challan_id, owner_name = self.challan_generator.generate(

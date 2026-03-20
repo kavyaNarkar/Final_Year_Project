@@ -21,6 +21,35 @@ const Signup = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!formData.firstName.trim() || !formData.lastName.trim()) {
+            setError("First Name / Last Name → not empty");
+            return;
+        }
+        
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.email)) {
+            setError("Email → valid email format");
+            return;
+        }
+        
+        const vehicleRegex = /^[A-Z]{2}\d{1,2}[A-Z]{1,2}\d{4}$/;
+        if (!vehicleRegex.test(formData.vehicleNumber.toUpperCase())) {
+            setError("Vehicle Number → must match format (e.g. MH48S3803)");
+            return;
+        }
+        
+        const phoneRegex = /^\d{10}$/;
+        if (!phoneRegex.test(formData.phoneNumber)) {
+            setError("Phone Number → exactly 10 digits");
+            return;
+        }
+        
+        if (formData.password.length < 6) {
+            setError("Password → minimum 6 characters");
+            return;
+        }
+
         setLoading(true);
         try {
             await api.post('/api/auth/register-user', formData);
@@ -34,6 +63,13 @@ const Signup = () => {
 
     const handleVerifyOtp = async (e) => {
         e.preventDefault();
+
+        const otpRegex = /^\d{6}$/;
+        if (!otpRegex.test(otp)) {
+            setError("OTP must be exactly 6 digits");
+            return;
+        }
+
         setLoading(true);
         try {
             await api.post('/api/auth/verify-registration-otp', {
@@ -43,7 +79,7 @@ const Signup = () => {
             alert("Registration successful! Please login.");
             navigate('/login');
         } catch (err) {
-            setError(err.response?.data?.error || "Invalid OTP. Please try again.");
+            setError(err.response?.data?.error || "Invalid OTP");
         } finally {
             setLoading(false);
         }
@@ -102,61 +138,61 @@ const Signup = () => {
                             <motion.form key="form" onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4"
                                 initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
                                 <div className="space-y-1">
-                                    <label className="text-xs text-slate-400 font-medium">First Name</label>
+                                    <label className="text-xs text-slate-200 font-medium">First Name</label>
                                     <input
                                         name="firstName" type="text" placeholder="John"
-                                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                        className="w-full bg-slate-700/80 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none"
                                         onChange={handleChange} required value={formData.firstName}
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs text-slate-400 font-medium">Last Name</label>
+                                    <label className="text-xs text-slate-200 font-medium">Last Name</label>
                                     <input
                                         name="lastName" type="text" placeholder="Doe"
-                                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                        className="w-full bg-slate-700/80 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none"
                                         onChange={handleChange} required value={formData.lastName}
                                     />
                                 </div>
                                 <div className="space-y-1 md:col-span-2">
-                                    <label className="text-xs text-slate-400 font-medium">Email Address</label>
+                                    <label className="text-xs text-slate-200 font-medium">Email Address</label>
                                     <div className="relative">
-                                        <Mail className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+                                        <Mail className="absolute left-3 top-2.5 w-4 h-4 text-slate-300" />
                                         <input
                                             name="email" type="email" placeholder="john@example.com"
-                                            className="w-full pl-9 bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                            className="w-full pl-9 bg-slate-700/80 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none"
                                             onChange={handleChange} required value={formData.email}
                                         />
                                     </div>
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs text-slate-400 font-medium">Vehicle Number</label>
+                                    <label className="text-xs text-slate-200 font-medium">Vehicle Number</label>
                                     <div className="relative">
-                                        <CarFront className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+                                        <CarFront className="absolute left-3 top-2.5 w-4 h-4 text-slate-300" />
                                         <input
                                             name="vehicleNumber" type="text" placeholder="MH12AB1234"
-                                            className="w-full pl-9 bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none uppercase"
+                                            className="w-full pl-9 bg-slate-700/80 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none uppercase"
                                             onChange={handleChange} required value={formData.vehicleNumber}
                                         />
                                     </div>
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-xs text-slate-400 font-medium">Phone Number</label>
+                                    <label className="text-xs text-slate-200 font-medium">Phone Number</label>
                                     <div className="relative">
-                                        <Phone className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+                                        <Phone className="absolute left-3 top-2.5 w-4 h-4 text-slate-300" />
                                         <input
                                             name="phoneNumber" type="tel" placeholder="9876543210"
-                                            className="w-full pl-9 bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                            className="w-full pl-9 bg-slate-700/80 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none"
                                             onChange={handleChange} required value={formData.phoneNumber}
                                         />
                                     </div>
                                 </div>
                                 <div className="space-y-1 md:col-span-2">
-                                    <label className="text-xs text-slate-400 font-medium">Password</label>
+                                    <label className="text-xs text-slate-200 font-medium">Password</label>
                                     <div className="relative">
-                                        <Lock className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+                                        <Lock className="absolute left-3 top-2.5 w-4 h-4 text-slate-300" />
                                         <input
                                             name="password" type="password" placeholder="••••••••"
-                                            className="w-full pl-9 bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                            className="w-full pl-9 bg-slate-700/80 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none"
                                             onChange={handleChange} required value={formData.password}
                                         />
                                     </div>
@@ -172,16 +208,16 @@ const Signup = () => {
                         ) : (
                             <motion.form key="otp" onSubmit={handleVerifyOtp} className="flex flex-col gap-4"
                                 initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-                                <p className="text-slate-300 text-sm mb-2">
-                                    Enter OTP sent to your email <strong>{formData.email}</strong>
+                                <p className="text-slate-200 text-sm mb-2">
+                                    Enter OTP sent to your email <strong className="text-white">{formData.email}</strong>
                                 </p>
                                 <div className="space-y-1">
-                                    <label className="text-xs text-slate-400 font-medium">6-Digit OTP</label>
+                                    <label className="text-xs text-slate-200 font-medium">6-Digit OTP</label>
                                     <div className="relative">
-                                        <Hash className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+                                        <Hash className="absolute left-3 top-2.5 w-4 h-4 text-slate-300" />
                                         <input
                                             type="text" maxLength={6} placeholder="123456"
-                                            className="w-full pl-9 bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none tracking-widest text-center"
+                                            className="w-full pl-9 bg-slate-700/80 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none tracking-widest text-center"
                                             onChange={(e) => { setOtp(e.target.value); setError(null); }} required value={otp}
                                         />
                                     </div>
@@ -194,7 +230,7 @@ const Signup = () => {
                                     <button type="button" onClick={handleResendOtp} disabled={loading} className="w-full py-2 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-lg transition-colors">
                                         Resend OTP
                                     </button>
-                                    <button type="button" onClick={() => setStep(1)} disabled={loading} className="w-full py-2 bg-transparent hover:bg-slate-800 text-slate-400 hover:text-white font-medium rounded-lg transition-colors text-sm underline">
+                                    <button type="button" onClick={() => { setStep(1); setError(null); }} disabled={loading} className="w-full py-2 bg-transparent hover:bg-slate-800 text-slate-300 hover:text-white font-medium rounded-lg transition-colors text-sm underline">
                                         Change Email
                                     </button>
                                 </div>

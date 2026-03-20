@@ -61,7 +61,7 @@ const ChallanDetails = () => {
                 <div className="header-left">
                     <div className="challan-meta-row">
                         <span className="challan-id-badge">#{challan.id}</span>
-                        <div className={`status-badge-lg ${challan.status}`}>
+                        <div className={`status-badge-lg ${challan.status === 'PAID' ? 'paid' : 'unpaid'}`}>
                             {challan.status}
                         </div>
                     </div>
@@ -165,7 +165,7 @@ const ChallanDetails = () => {
                     <div className="card-box">
                         <h3 className="section-title">Actions</h3>
 
-                        {challan.status !== 'paid' ? (
+                        {challan.status !== 'PAID' ? (
                             <button
                                 onClick={handlePayClick}
                                 className="action-btn-pay"
@@ -174,7 +174,7 @@ const ChallanDetails = () => {
                             </button>
                         ) : (
                             <div className="paid-banner">
-                                <ShieldAlert className="w-5 h-5" /> Paid on {challan.payment_date || 'Unknown Date'}
+                                <ShieldAlert className="w-5 h-5" /> Paid on {challan.payment_date || 'Successfully'}
                             </div>
                         )}
 

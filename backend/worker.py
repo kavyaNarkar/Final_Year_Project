@@ -121,17 +121,21 @@ def process_violations(app):
                         else:
                             violation.fine_amount = 500.0 # Default fine
                             
-                        violation.status = "processed"
+                        violation.status = "UNPAID"
                         violation.confidence_score = 0.95
                         print(f"Matched Vehicle: {final_plate}")
                     else:
-                        violation.violation_type = "Unidentified"
+                        if violation.violation_type in ["Processing...", "Unidentified", "pending"]:
+                             violation.violation_type = "Unidentified"
                         violation.status = "needs_review"
                         violation.fine_amount = 0.0
                         print(f"Could not match vehicle definitively. Read: {final_plate}")
 
                     # ISSUE 7: Debug Print
-                    print("Final Violation Type:", violation.violation_type)
+                    print("Violation:", violation.violation_type)
+                    print("Status:", violation.status)
+                    print("Image:", violation.image_path)
+                    
                     db.session.commit()
                     
                 except Exception as e:

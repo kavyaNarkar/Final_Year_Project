@@ -30,8 +30,8 @@ const MyChallans = () => {
 
     const filteredChallans = challans.filter(c => {
         if (activeTab === 'all') return true;
-        if (activeTab === 'unpaid') return c.status === 'pending';
-        if (activeTab === 'paid') return c.status === 'paid';
+        if (activeTab === 'unpaid') return c.status === 'UNPAID';
+        if (activeTab === 'paid') return c.status === 'PAID';
         return true;
     });
 
@@ -43,8 +43,8 @@ const MyChallans = () => {
                 
                 <div className="status-tabs">
                     {[
-                        { id: 'unpaid', label: 'Unpaid', count: challans.filter(c => c.status === 'pending').length },
-                        { id: 'paid', label: 'Paid', count: challans.filter(c => c.status === 'paid').length },
+                        { id: 'unpaid', label: 'Unpaid', count: challans.filter(c => c.status === 'UNPAID').length },
+                        { id: 'paid', label: 'Paid', count: challans.filter(c => c.status === 'PAID').length },
                         { id: 'all', label: 'All', count: challans.length },
                     ].map(tab => (
                         <button

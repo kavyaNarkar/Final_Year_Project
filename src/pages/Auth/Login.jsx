@@ -19,7 +19,22 @@ const Login = () => {
 
     const handleLogin = async (e) => {
         e.preventDefault();
-        if (!formData.identifier || !formData.password) return;
+        
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const usernameRegex = /^[a-zA-Z0-9_]{3,}$/;
+        
+        if (!formData.identifier || !formData.password) {
+            setError("Please enter your credentials");
+            return;
+        }
+
+        const isEmail = emailRegex.test(formData.identifier);
+        const isUsername = usernameRegex.test(formData.identifier);
+
+        if (!isEmail && !isUsername) {
+            setError("Please enter a valid email or username format");
+            return;
+        }
 
         setIsLoading(true);
         setError(null);
@@ -78,14 +93,14 @@ const Login = () => {
 
                 <form onSubmit={handleLogin} className="space-y-6">
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-300">Username / Email</label>
+                        <label className="text-sm font-medium text-slate-200">Username / Email</label>
                         <div className="relative">
-                            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-300" />
                             <input
                                 type="text"
                                 name="identifier"
                                 placeholder="Enter your credential"
-                                className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-light"
+                                className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-light"
                                 value={formData.identifier}
                                 onChange={handleInputChange}
                                 required
@@ -94,14 +109,14 @@ const Login = () => {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-300">Password</label>
+                        <label className="text-sm font-medium text-slate-200">Password</label>
                         <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-300" />
                             <input
                                 type="password"
                                 name="password"
                                 placeholder="••••••••"
-                                className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-light"
+                                className="w-full pl-10 pr-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-light"
                                 value={formData.password}
                                 onChange={handleInputChange}
                                 required
@@ -111,7 +126,7 @@ const Login = () => {
                             <button
                                 type="button"
                                 onClick={() => navigate('/forgot-password')}
-                                className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                                className="text-sm text-blue-300 hover:text-blue-200 transition-colors"
                             >
                                 Forgot Password?
                             </button>
@@ -139,11 +154,11 @@ const Login = () => {
                 </form>
 
                 <div className="mt-8 text-center space-y-2">
-                    <p className="text-slate-400 text-sm">Don't have an account?</p>
+                    <p className="text-slate-300 text-sm">Don't have an account?</p>
                     <div className="space-x-4">
-                        <button onClick={() => navigate('/signup')} className="text-blue-400 hover:text-blue-300 font-medium transition-colors text-sm">Create Account</button>
-                        <span className="text-slate-600">|</span>
-                        <button onClick={() => navigate('/admin-signup')} className="text-emerald-400 hover:text-emerald-300 font-medium transition-colors text-sm">Admin Access</button>
+                        <button onClick={() => navigate('/signup')} className="text-blue-300 hover:text-blue-200 font-medium transition-colors text-sm">Create Account</button>
+                        <span className="text-slate-500">|</span>
+                        <button onClick={() => navigate('/admin-signup')} className="text-emerald-300 hover:text-emerald-200 font-medium transition-colors text-sm">Admin Access</button>
                     </div>
                 </div>
             </motion.div>

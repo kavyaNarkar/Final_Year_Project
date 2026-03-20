@@ -88,6 +88,8 @@ const AdminSignup = () => {
                                     placeholder="admin_officer"
                                     className="w-full pl-9 bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-emerald-500 outline-none"
                                     onChange={handleChange} required
+                                    pattern="^[a-zA-Z0-9_]{3,}$"
+                                    title="Username must be at least 3 characters and only contain letters, numbers, and underscores (no spaces)."
                                 />
                             </div>
                         </div>

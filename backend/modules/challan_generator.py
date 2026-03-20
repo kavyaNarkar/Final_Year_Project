@@ -32,7 +32,7 @@ class ChallanGenerator:
                 vehicle_number=plate_number if is_valid_plate else None,
                 violation_type=violation_type,
                 location=location,
-                status="pending",
+                status="UNPAID",
                 fine_amount=500.0,
                 image_path=image_path,
                 video_path=video_path,

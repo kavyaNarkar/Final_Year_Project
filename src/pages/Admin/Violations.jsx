@@ -58,9 +58,8 @@ const Violations = () => {
                         className="filter-select"
                     >
                         <option value="all">All Status</option>
-                        <option value="pending">Pending</option>
-                        <option value="processed">Processed</option>
-                        <option value="paid">Paid</option>
+                        <option value="UNPAID">Unpaid</option>
+                        <option value="PAID">Paid</option>
                     </select>
                 </div>
             </div>
@@ -98,7 +97,7 @@ const Violations = () => {
                                 </td>
                                 <td className="cell-fine">₹{v.fine || 0}</td>
                                 <td>
-                                    <span className={`status-text ${v.status}`}>
+                                    <span className={`status-text ${v.status === 'PAID' ? 'paid' : 'unpaid'}`}>
                                         {v.status}
                                     </span>
                                 </td>

@@ -13,6 +13,7 @@ import AdminStatistics from './pages/Admin/Statistics';
 import LiveStream from './pages/Admin/LiveStream';
 import Reports from './pages/Admin/Reports';
 import ReportDetails from './pages/Admin/ReportDetails';
+import AdminProfile from './pages/Admin/Profile';
 import UserDashboard from './pages/User/Dashboard';
 import MyChallans from './pages/User/MyChallans';
 import ChallanDetails from './pages/User/ChallanDetails';
@@ -63,6 +64,7 @@ function App() {
           <Route path="reports" element={<Reports />} />
           <Route path="report/:id" element={<ReportDetails />} />
           <Route path="stats" element={<AdminStatistics />} />
+          <Route path="profile" element={<AdminProfile />} />
         </Route>
 
         {/* User Routes */}

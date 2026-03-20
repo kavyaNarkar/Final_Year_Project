@@ -80,8 +80,8 @@ const Challans = () => {
                         className="filter-select"
                     >
                         <option value="all">Status: All</option>
-                        <option value="pending">Status: Unpaid</option>
-                        <option value="paid">Status: Paid</option>
+                        <option value="UNPAID">Status: Unpaid</option>
+                        <option value="PAID">Status: Paid</option>
                     </select>
                 </div>
                 <div className="filter-select-wrapper">

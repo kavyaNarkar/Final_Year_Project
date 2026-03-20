@@ -169,8 +169,8 @@ const UserDashboard = () => {
                         statsData.recent_activity.map((activity) => (
                             <div key={activity.id} className="recent-item">
                                 <div className="recent-item-left">
-                                    <div className={`recent-icon-wrapper ${activity.status === 'pending' ? 'red' : 'emerald'}`}>
-                                        {activity.status === 'pending' ? <AlertTriangle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                                    <div className={`recent-icon-wrapper ${activity.status === 'UNPAID' ? 'red' : 'emerald'}`}>
+                                        {activity.status === 'UNPAID' ? <AlertTriangle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
                                     </div>
                                     <div className="recent-details">
                                         <p className="title">{activity.type}</p>
@@ -179,8 +179,8 @@ const UserDashboard = () => {
                                 </div>
                                 <div className="recent-item-right">
                                     <p className="amount">₹ {activity.amount}</p>
-                                    <p className={`status ${activity.status === 'pending' ? 'pending' : 'success'}`}>
-                                        {activity.status.charAt(0).toUpperCase() + activity.status.slice(1)}
+                                    <p className={`status ${activity.status === 'UNPAID' ? 'pending' : 'success'}`}>
+                                        {activity.status.charAt(0).toUpperCase() + activity.status.slice(1).toLowerCase()}
                                     </p>
                                 </div>
                             </div>

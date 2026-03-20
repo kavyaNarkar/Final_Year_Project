@@ -71,7 +71,7 @@ class Violation(db.Model):
     violation_type = db.Column(db.String(50), nullable=False)
     location = db.Column(db.String(100), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    status = db.Column(db.String(20), default='pending') # pending, processed, paid
+    status = db.Column(db.String(20), default='UNPAID') # UNPAID, PAID, needs_review
     fine_amount = db.Column(db.Float, default=0.0)
     image_path = db.Column(db.String(200), nullable=False)
     video_path = db.Column(db.String(200), nullable=True) # 10s video path
